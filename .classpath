@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/usr/share/java/httpclient.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/httpcore.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/httpmime.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/junit4.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jackson-mapper.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jackson-core.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/commons-logging-api.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/commons-logging.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/commons-logging-adapters.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/commons-codec.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/commons-io.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
