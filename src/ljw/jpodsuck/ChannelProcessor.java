@@ -57,16 +57,9 @@ public class ChannelProcessor {
 			Map.Entry<String, DownloadTask> entry = it.next();
 			if (entry.getValue().isDone())
 			{
-				System.out.println("sz bf: " + downloads.size());
 				System.out.println("finished dl " + entry.getKey().toString());
 				it.remove();
-				System.out.println("sz after: " + downloads.size());
 			}
-			else
-			{
-				System.out.println("not done " + entry.getKey().toString());
-			}
-			
 		}
 		return downloads.isEmpty();
 	}
@@ -78,10 +71,15 @@ public class ChannelProcessor {
 		@Override
 		public void visit(Item item) {
 			try {
-				URL url =  new URL(item.url); // validaate url
+				URL url =  new URL(item.url); // validate url
 				Path savePath = Paths.get(ChannelProcessor.this.folder, FilenameUtils.getName(url.getPath()));
-				ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
-				System.out.println("sz after: " + ChannelProcessor.this.downloads.size());
+				if (Files.notExists(savePath, LinkOption.NOFOLLOW_LINKS) || Files.size(savePath) != item.length) {
+					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
+					System.out.println("sz after: " + ChannelProcessor.this.downloads.size());
+				}
+				else {
+					System.out.println(item.url + ": already downloaded.");
+				}
 			} catch (MalformedURLException e) {
 				System.out.println("malformed url" + item.url);
 			} catch (Exception e) {
