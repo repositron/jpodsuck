@@ -13,6 +13,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.util.EntityUtils;
 import org.apache.commons.codec.*;
 
@@ -26,7 +27,7 @@ public class Top {
 	public void update()
 	{
 		try {
-			httpclient = new DefaultHttpClient();
+			httpclient = new DefaultHttpClient(new ThreadSafeClientConnManager());
 			ObjectMapper mapper = new ObjectMapper();
 			Config config = mapper.readValue(new File("config.json"), Config.class);
 			//BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
@@ -57,13 +58,12 @@ public class Top {
 							it.remove();
 						}
 					}
+					Thread.sleep(30);
 				}
 				
-				
-				/*
-				
+
 	            System.out.println("----------------------------------------");
-	            System.out.println(response.getStatusLine());
+	            /*System.out.println(response.getStatusLine());
 	            if (entity != null) {
 	                System.out.println("Response content length: " + entity.getContentLength());
 	            }

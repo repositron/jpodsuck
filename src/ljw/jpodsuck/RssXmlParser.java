@@ -44,7 +44,6 @@ class RssSaxHandler extends DefaultHandler
 		TOP, CHANNELTITLE,
 		channel {
 			RssElement startElement(PodcastsInterface podcasts, RssElement currElement, Attributes atts) throws SAXException {
-				System.out.println(this.name() + " startElement " + currElement.name());
 				if (currElement == RssElement.TOP)
 				{
 					currElement = RssElement.channel;
@@ -52,7 +51,6 @@ class RssSaxHandler extends DefaultHandler
 				return currElement;
 			}
 			RssElement endElement (PodcastsInterface podcasts, RssElement currElement, String localName) throws SAXException {
-				System.out.println(this.name() + " endElement " + currElement.name());
 				if (currElement == RssElement.channel)
 				{
 					return RssElement.TOP;	
@@ -63,7 +61,6 @@ class RssSaxHandler extends DefaultHandler
 		},
 		title {
 			RssElement startElement(PodcastsInterface podcasts, RssElement currElement, Attributes atts) throws SAXException {
-				System.out.println(this.name() + " startElement " + currElement.name());
 				title.delete(0, title.length());
 				if (currElement == RssElement.item)
 				{
@@ -76,7 +73,6 @@ class RssSaxHandler extends DefaultHandler
 				return currElement;
 			}
 			RssElement endElement (PodcastsInterface podcasts, RssElement currElement, String localName) throws SAXException {
-				System.out.println(this.name() + " startElement " + currElement.name());
 				if (currElement == RssElement.title)
 				{
 					podcasts.addContextTitle(title.toString());
@@ -171,17 +167,14 @@ class RssSaxHandler extends DefaultHandler
 	}
     public void startDocument ()
     {
-    	System.out.println("Start document");
     }
 
     public void endDocument ()
     {
-    	System.out.println("End document");
     }
     public void startElement (String uri, String localName, String qName, Attributes atts)
 	{
     	try {
-    		System.out.println(this.currElement.name() + "*startELement " + localName);
     		currElement = RssElement.valueOf(RssElement.class, localName.toLowerCase()).startElement(podcasts, currElement, atts);
     	} catch (IllegalArgumentException e) {
     		
@@ -193,7 +186,6 @@ class RssSaxHandler extends DefaultHandler
 
 	public void endElement (String uri, String localName, String qName) {
 		try {
-			System.out.println(this.currElement.name() + "*endELement " + localName);
 			currElement = RssElement.valueOf(RssElement.class, localName.toLowerCase()).endElement(podcasts, currElement, localName);
     	} catch (IllegalArgumentException e) {
     		

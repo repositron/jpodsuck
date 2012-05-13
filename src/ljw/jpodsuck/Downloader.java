@@ -20,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -39,7 +40,8 @@ public enum Downloader {
 		this.httpClient = httpClient;
 	}
 	
-	public DownloadTask download(URL url, String filename) {
+	public DownloadTask download(String url, String filename) {
+		System.out.println("downloading " + url.toString() + " file: " + filename);
 		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, url, filename);
 		DownloadTask downloadTask = new DownloadTask(downloadRunnable);
 		exec.execute(downloadTask);
@@ -55,12 +57,12 @@ public enum Downloader {
 class DownloadRunnable implements Callable<Integer>
 {
 	AbstractHttpClient httpClient;
-	public URL  source;
+	public String  source;
 	public String destination;
 	
-	DownloadRunnable(AbstractHttpClient httpClient, URL source, String destination) {
+	DownloadRunnable(AbstractHttpClient httpClient, String url, String destination) {
 		this.httpClient = httpClient;
-		this.source = source;
+		this.source = url;
 		this.destination = destination;
 	}
 	
@@ -69,18 +71,26 @@ class DownloadRunnable implements Callable<Integer>
 	public Integer call() throws Exception {
 		HttpResponse response;
 		try {
-			HttpGet httpget = new HttpGet(source.toString());
+			System.out.println("call(): " + source);
+			HttpGet httpget = new HttpGet(source);
 			response = httpClient.execute(httpget);
 			HttpEntity entity = response.getEntity();
 	        //BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
 	        File f = new File(destination);
-	        IOUtils.copy(new InputStreamReader(entity.getContent()), new FileOutputStream(f));
+	        FileOutputStream outputStream = new FileOutputStream(f);
+	        InputStream input = entity.getContent();
+	        IOUtils.copy(input, outputStream);
+	        outputStream.close();
+	        input.close();
+	        System.out.println("written: " + destination);
 	        
 		} catch (ClientProtocolException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return 1;

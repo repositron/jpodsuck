@@ -1,6 +1,7 @@
 package ljw.jpodsuck;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class ChannelProcessor {
 	private DefaultHttpClient httpclient;
 	private URL urlChannel;
 	private String folder;
-	protected Map<URL, DownloadTask> downloads = new TreeMap<URL, DownloadTask>();
+	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
 	
 	ChannelProcessor(DefaultHttpClient httpclient, URL urlChannel, String folder) {
 		this.httpclient = httpclient;
@@ -50,15 +51,22 @@ public class ChannelProcessor {
 		}
 	}
 	public Boolean isFinished() {
-		Iterator<Map.Entry<URL, DownloadTask>> it = downloads.entrySet().iterator();
-		if (it.hasNext()) {
-			try {
-				it.next().getValue().get(1, TimeUnit.MILLISECONDS);
+		// iterate through work requests removing ones which has finished
+		Iterator<Map.Entry<String, DownloadTask>> it = downloads.entrySet().iterator();
+		while (it.hasNext()) {
+			Map.Entry<String, DownloadTask> entry = it.next();
+			if (entry.getValue().isDone())
+			{
+				System.out.println("sz bf: " + downloads.size());
+				System.out.println("finished dl " + entry.getKey().toString());
 				it.remove();
-			} catch (TimeoutException e) {
-			} catch (Exception e) {
+				System.out.println("sz after: " + downloads.size());
 			}
-		
+			else
+			{
+				System.out.println("not done " + entry.getKey().toString());
+			}
+			
 		}
 		return downloads.isEmpty();
 	}
@@ -70,13 +78,14 @@ public class ChannelProcessor {
 		@Override
 		public void visit(Item item) {
 			try {
-				URL url =  new URL(item.url);
-				System.out.println(url.getPath());
-				System.out.println(FilenameUtils.getName(url.getPath()));
+				URL url =  new URL(item.url); // validaate url
 				Path savePath = Paths.get(ChannelProcessor.this.folder, FilenameUtils.getName(url.getPath()));
-				ChannelProcessor.this.downloads.put(url, Downloader.INSTANCE.download(url, savePath.toString()));
+				ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
+				System.out.println("sz after: " + ChannelProcessor.this.downloads.size());
+			} catch (MalformedURLException e) {
+				System.out.println("malformed url" + item.url);
 			} catch (Exception e) {
-				
+				e.printStackTrace(System.out);
 			}
 		}
 	}
