@@ -33,6 +33,7 @@ public class RssXmlParserTest {
 			assertEquals(true, r.parse());
 			Map<String, Item> podc = pc.getPodcasts();
 			assertEquals(152, podc.size());
+			assertEquals("JapanesePod101.com | My Feed - Lower Intermediate Lessons S5", pc.getChannelTitle());
 			Item item = podc.get("http://www.japanesepod101.com/premium_feed/pdfs/LI_S5L17_082410_jpod101_kanji.pdf");
 			Assert.assertNotNull(item);
 			assertEquals(100473, item.length);

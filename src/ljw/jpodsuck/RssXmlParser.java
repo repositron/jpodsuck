@@ -41,7 +41,11 @@ public class RssXmlParser {
 class RssSaxHandler extends DefaultHandler
 {
 	enum RssElement {
-		TOP, CHANNELTITLE,
+		TOP, CHANNELTITLE {
+			void characters(PodcastsInterface podcasts, RssElement currElement, char[] ch, int start, int length) throws SAXException {
+				RssElement.title.characters(podcasts, currElement, ch, start, length);
+			}
+		},
 		channel {
 			RssElement startElement(PodcastsInterface podcasts, RssElement currElement, Attributes atts) throws SAXException {
 				if (currElement == RssElement.TOP)
@@ -159,6 +163,7 @@ class RssSaxHandler extends DefaultHandler
 		void characters(PodcastsInterface podcasts, RssElement currElement, char[] ch, int start, int length) throws SAXException {
 			
 		}
+
 	}
 	public RssSaxHandler(PodcastsInterface podcasts)
 	{
@@ -187,7 +192,7 @@ class RssSaxHandler extends DefaultHandler
 	public void endElement (String uri, String localName, String qName) {
 		try {
 			currElement = RssElement.valueOf(RssElement.class, localName.toLowerCase()).endElement(podcasts, currElement, localName);
-    	} catch (IllegalArgumentException e) {
+		} catch (IllegalArgumentException e) {
     		
     	} catch (SAXException e) {
     		
