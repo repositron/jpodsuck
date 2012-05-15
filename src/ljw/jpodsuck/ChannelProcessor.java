@@ -20,13 +20,14 @@ public class ChannelProcessor {
 
 	private DefaultHttpClient httpclient;
 	private URL urlChannel;
-	private String folder;
+	private String saveToRootFolder;
+	private Path saveFolder;
 	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
 	
-	ChannelProcessor(DefaultHttpClient httpclient, URL urlChannel, String folder) {
+	ChannelProcessor(DefaultHttpClient httpclient, URL urlChannel, String saveToRootFolder) {
 		this.httpclient = httpclient;
 		this.urlChannel = urlChannel;
-		this.folder = folder;
+		this.saveToRootFolder = saveToRootFolder;
 	}
 	public void process() {
 		loadHistory();
@@ -44,6 +45,18 @@ public class ChannelProcessor {
 	        PodcastsInterface podcasts = new Podcasts();
 	        RssXmlParser parser = new RssXmlParser(reader, podcasts);
 	        parser.parse();
+	        final String throwAwayStr = "JapanesePod101.com | My Feed - ";
+	        String channelTitle = podcasts.getChannelTitle();
+	        String folder;
+	        if (channelTitle.startsWith(throwAwayStr))
+	        {
+	        	folder = channelTitle.substring(throwAwayStr.length() - 1);	
+	        }
+	        else {
+	        	folder =  channelTitle;
+	        }
+	        saveFolder = Paths.get(saveToRootFolder, folder);
+	        
 	        Visitor visitor = new Visitor();
 	        podcasts.accept(visitor);
 		} catch (Exception e) {
@@ -66,13 +79,17 @@ public class ChannelProcessor {
 	public void close() {
 		
 	}
+	
+	public void writePlayList() {
+		
+	}
 	class Visitor implements PodcastVisitor 
 	{
 		@Override
 		public void visit(Item item) {
 			try {
 				URL url =  new URL(item.url); // validate url
-				Path savePath = Paths.get(ChannelProcessor.this.folder, FilenameUtils.getName(url.getPath()));
+				Path savePath = Paths.get(ChannelProcessor.this.saveFolder.toString(), FilenameUtils.getName(url.getPath()));
 				if (Files.notExists(savePath, LinkOption.NOFOLLOW_LINKS) || Files.size(savePath) != item.length) {
 					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
 					System.out.println("sz after: " + ChannelProcessor.this.downloads.size());

@@ -7,4 +7,5 @@ public class Config {
 	public String password;
 	public ArrayList<String> urls;
 	public String folder;
+	public Integer updateinterval;
 }
