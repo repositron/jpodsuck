@@ -50,13 +50,15 @@ public class ChannelProcessor {
 	        String folder;
 	        if (channelTitle.startsWith(throwAwayStr))
 	        {
-	        	folder = channelTitle.substring(throwAwayStr.length() - 1);	
+	        	folder = channelTitle.substring(throwAwayStr.length());	
 	        }
 	        else {
 	        	folder =  channelTitle;
 	        }
 	        saveFolder = Paths.get(saveToRootFolder, folder);
-	        
+	        if (Files.notExists(saveFolder, LinkOption.NOFOLLOW_LINKS)) {
+	        	Files.createDirectory(saveFolder);
+	        }
 	        Visitor visitor = new Visitor();
 	        podcasts.accept(visitor);
 		} catch (Exception e) {
