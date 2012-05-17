@@ -6,8 +6,6 @@ import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.nio.file.*;
 
 import org.apache.http.HttpEntity;
@@ -83,7 +81,8 @@ public class ChannelProcessor {
 	}
 	
 	public void writePlayList() {
-		
+		PlayList pl = new PlayList(saveFolder);
+		pl.create();
 	}
 	class Visitor implements PodcastVisitor 
 	{

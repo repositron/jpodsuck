@@ -13,5 +13,6 @@
 	<classpathentry kind="lib" path="/usr/share/java/commons-logging-adapters.jar"/>
 	<classpathentry kind="lib" path="/usr/share/java/commons-codec.jar"/>
 	<classpathentry kind="lib" path="/usr/share/java/commons-io.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jaudiotagger.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
