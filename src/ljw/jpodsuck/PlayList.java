@@ -1,17 +1,7 @@
 package ljw.jpodsuck;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
+
+import java.io.*;
 import java.nio.file.*;
 import java.util.Map;
 import java.util.Scanner;
@@ -50,8 +40,9 @@ public class PlayList {
 		}
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder, "*.mp3")) {
 			for (Path entry : stream) {
+				String fileName = entry.getFileName().toString();
 				System.out.println(entry);
-				if (!mp3s.containsKey(entry.toString())) {
+				if (!mp3s.containsKey(fileName)) {
 					AudioFile f = AudioFileIO.read(entry.toFile());
 					Tag tag = f.getTag();
 					String title;
@@ -59,9 +50,9 @@ public class PlayList {
 						title = tag.getFirst(FieldKey.TITLE);
 					
 					else
-						title = entry.getFileName().toString();
+						title = fileName;
 					PlayListEntry playListEntry = new PlayListEntry(title, f.getAudioHeader().getTrackLength());
-					mp3s.put(entry.toString(), playListEntry);
+					mp3s.put(fileName, playListEntry);
 					System.out.println("mp3: " + playListEntry.title + ", " + playListEntry.length);
 				}
 			}
@@ -80,21 +71,33 @@ public class PlayList {
 	void readPlayList() {
 		try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(playListFile.toFile()), "UTF-8"))) {
 			String ln = in.readLine();
-			if (!ln.startsWith("#EXTM3U")) {
+			if (ln == null || !ln.startsWith("#EXTM3U")) {
 				throw new RuntimeException("header not found in: " + playListFile.toString());
 			}
 			Scanner scanner = new Scanner(in);
-			String pattern = "^#EXTINF:(\\d+),(\\S+)$";
-			while (scanner.hasNext(pattern)) {
-				MatchResult match = scanner.match();
-				PlayListEntry plentry = new PlayListEntry(match.group(2), Integer.parseInt(match.group(1)));
-				String file = in.readLine();
-				mp3s.put(file, plentry);
+			while (scanner.hasNextLine()) {
+				String entryLn = scanner.nextLine();
+				final String  extinfStr = "#EXTINF:";
+				if (entryLn.startsWith(extinfStr)) {
+					int commarIndex = entryLn.indexOf(",", extinfStr.length());
+					if (commarIndex != -1) {
+						int time = Integer.parseInt(entryLn.substring(extinfStr.length(), commarIndex));
+						String title = entryLn.substring(commarIndex + 1).trim();
+						PlayListEntry plentry = new PlayListEntry(title, time);
+						if (scanner.hasNextLine())
+						{	String filePath = scanner.nextLine().trim();
+							mp3s.put(filePath, plentry);
+						}
+					}
+					else
+						break;
+				}
+				else
+					break;
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
+		} catch (Exception e) {
 			e.printStackTrace();
-		}
+		} 
 	}
 	void writePlayList() {
 		try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(playListFile.toFile()), "UTF-8"))) {
