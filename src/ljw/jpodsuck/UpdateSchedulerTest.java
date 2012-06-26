@@ -65,7 +65,7 @@ public class UpdateSchedulerTest {
 		UpdateScheduler us = new UpdateScheduler(time2Path, 20, 10);
 		assertTrue(Files.exists(time2Path, LinkOption.NOFOLLOW_LINKS));
 		Calendar c = c1980;
-		assertTrue(us.canUpdate(c));
+		assertFalse(us.canUpdate(c));
 		us.updateSuccess(c);
 		c.add(Calendar.MINUTE, 20);
 		assertFalse(us.canUpdate(c));

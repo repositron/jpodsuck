@@ -22,8 +22,6 @@ public enum Downloader {
 	
 	AbstractHttpClient httpClient;
 	ExecutorService exec = Executors.newFixedThreadPool(5);
-	//BlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>(); 
-	//DnlThreadPoolExecutor executor = new DnlThreadPoolExecutor(queue);
 	
 	void init(AbstractHttpClient httpClient) {
 		this.httpClient = httpClient;
@@ -64,7 +62,6 @@ class DownloadRunnable implements Callable<Integer>
 			HttpGet httpget = new HttpGet(source);
 			response = httpClient.execute(httpget);
 			HttpEntity entity = response.getEntity();
-	        //BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
 	        File f = new File(destination);
 	        FileOutputStream outputStream = new FileOutputStream(f);
 	        InputStream input = entity.getContent();

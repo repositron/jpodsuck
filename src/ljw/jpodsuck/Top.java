@@ -3,7 +3,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.io.BufferedReader;
 
@@ -19,11 +23,16 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.util.EntityUtils;
+import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
 import org.apache.commons.codec.*;
 
 public class Top {
+	static Logger logger = Logger.getLogger("ljw.jpodsuck");
+	
 	Config config;
 	DefaultHttpClient httpclient;
+	static UpdateScheduler updateScheduler = new UpdateScheduler(Paths.get(".updateschedule"), 120, 10);
 	Top()
 	{
 		ObjectMapper mapper = new ObjectMapper();
@@ -31,21 +40,20 @@ public class Top {
 			config = mapper.readValue(new File("config.json"), Config.class);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
+			logger.error("cannot open config file.");
 			e.printStackTrace();
 		}
 	}
 	public void update()
 	{
 		try {
+			logger.info("updating");
 			httpclient = new DefaultHttpClient(new ThreadSafeClientConnManager());
 			try {
 				URL url = new URL(config.urls.get(0));
-				System.out.println(url.toString());
-				System.out.println(url.getHost());
-				System.out.println(httpclient.getCredentialsProvider().toString());
+	
 				httpclient.getCredentialsProvider().setCredentials(new AuthScope(url.getHost(), AuthScope.ANY_PORT, null, "basic"),
                     new UsernamePasswordCredentials(config.user, config.password));
-				System.out.println(httpclient.getCredentialsProvider().toString());
 				Downloader.INSTANCE.init(httpclient);
 	            
 				ArrayList<ChannelProcessor> processors = new ArrayList<ChannelProcessor>();
@@ -72,6 +80,7 @@ public class Top {
 	            System.out.println("----------------------------------------");
 
 	        } catch (Exception e) {
+	        	logger.error("Exception ", e);
 				e.printStackTrace(System.out);
 			} finally {
 				Downloader.INSTANCE.close();
@@ -84,9 +93,21 @@ public class Top {
 	}
 	
 	public static void main(String[] args) {
-
+		DOMConfigurator.configure("log4j.xml");
+		logger.info("jpodsuck starting");
 		Top t = new Top();
-		t.update();
+		while (true) {
+			try {					
+				if (updateScheduler.canUpdate(new GregorianCalendar())) {
+					t.update();
+					updateScheduler.updateSuccess(new GregorianCalendar());
+				}
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 
 	}
 

@@ -12,6 +12,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.log4j.Logger;
 import org.apache.commons.io.FilenameUtils;
 
 public class ChannelProcessor {
@@ -21,6 +22,7 @@ public class ChannelProcessor {
 	private String saveToRootFolder;
 	private Path saveFolder;
 	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
+	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
 	ChannelProcessor(DefaultHttpClient httpclient, URL urlChannel, String saveToRootFolder) {
 		this.httpclient = httpclient;
@@ -36,6 +38,7 @@ public class ChannelProcessor {
 	}
 	void downloadRssFile() {
 		try{
+			logger.info("channel: " + urlChannel.toString());
 			HttpGet httpget = new HttpGet(urlChannel.toString());
 			HttpResponse response = httpclient.execute(httpget);
 	        HttpEntity entity = response.getEntity();
@@ -60,7 +63,7 @@ public class ChannelProcessor {
 	        Visitor visitor = new Visitor();
 	        podcasts.accept(visitor);
 		} catch (Exception e) {
-			
+			logger.error("downloadRssFile exception", e);
 		}
 	}
 	public Boolean isFinished() {
@@ -70,7 +73,7 @@ public class ChannelProcessor {
 			Map.Entry<String, DownloadTask> entry = it.next();
 			if (entry.getValue().isDone())
 			{
-				System.out.println("finished dl " + entry.getKey().toString());
+				logger.info("finished dl " + entry.getKey().toString());
 				it.remove();
 			}
 		}
@@ -91,17 +94,31 @@ public class ChannelProcessor {
 			try {
 				URL url =  new URL(item.url); // validate url
 				Path savePath = Paths.get(ChannelProcessor.this.saveFolder.toString(), FilenameUtils.getName(url.getPath()));
-				if (Files.notExists(savePath, LinkOption.NOFOLLOW_LINKS) || Files.size(savePath) != item.length) {
-					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
-					System.out.println("sz after: " + ChannelProcessor.this.downloads.size());
+				boolean download = false;
+				
+				if (Files.exists(savePath, LinkOption.NOFOLLOW_LINKS))
+				{
+					if (Files.size(savePath) != item.length)
+					{
+						logger.info(savePath.toString() + "already exists but size is different origSize:" + Files.size(savePath) + "newSize:" + item.length);
+						download = true;
+					}
 				}
-				else {
-					System.out.println(item.url + ": already downloaded.");
+				else
+				{
+					logger.info(savePath.toString() + "doesn't exist  ");
+					download = true;
+					
+				}
+				if (download)
+				{
+					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
+					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + ChannelProcessor.this.downloads.size());
 				}
 			} catch (MalformedURLException e) {
-				System.out.println("malformed url" + item.url);
+				logger.error("malformed url" + item.url, e);
 			} catch (Exception e) {
-				e.printStackTrace(System.out);
+				logger.error("vistor", e);
 			}
 		}
 	}
