@@ -41,7 +41,6 @@ class UpdateScheduler {
 	}
 	
 	public Boolean canUpdate(Calendar currentTime) {
-		//System.out.println("next time " + isoFormat.format(nextTime.getTime()));
 		if (currentTime.after(nextTime))
 			return true;
 		else
