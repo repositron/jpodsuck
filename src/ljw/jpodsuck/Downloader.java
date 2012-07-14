@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
 
@@ -73,9 +75,11 @@ class DownloadRunnable implements Callable<Integer>
 	        IOUtils.copy(input, outputStream);
 	        outputStream.close();
 	        input.close();
+	        history.recordFileWritten(Paths.get(destination), new URL(source), true, 0 /*TODO: need rss size*/);
 	        logger.info("written: " + destination);
 	        
 		} catch (Exception e) {
+			history.recordFileWritten(Paths.get(destination), new URL(source), false, 0);
 			logger.info("exception: ", e);
 		}
 		return 1;

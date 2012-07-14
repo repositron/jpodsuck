@@ -104,7 +104,6 @@ public class ChannelProcessor {
 		    if (Files.notExists(saveFolder, LinkOption.NOFOLLOW_LINKS)) {
 		    	Files.createDirectory(saveFolder);
 		    }
-		    //this.history = History.get(saveFolder, channelTitle);
 		    Visitor visitor = new Visitor(this.history);
 		    podcasts.accept(visitor);
 		    saveRssFile(folder, rss);
