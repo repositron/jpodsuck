@@ -29,7 +29,6 @@ public class RssXmlParser {
 			e.printStackTrace();
 		} catch (Exception e)
 		{
-			System.out.println("Caught an exception");
 			e.printStackTrace();
 		}
 		return false;

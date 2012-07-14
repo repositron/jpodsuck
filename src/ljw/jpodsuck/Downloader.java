@@ -9,6 +9,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.AbstractHttpClient;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,7 +20,7 @@ import org.apache.commons.io.IOUtils;
 
 public enum Downloader {
 	INSTANCE;
-	
+	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	AbstractHttpClient httpClient;
 	ExecutorService exec = Executors.newFixedThreadPool(5);
 	
@@ -27,9 +28,9 @@ public enum Downloader {
 		this.httpClient = httpClient;
 	}
 	
-	public DownloadTask download(String url, String filename) {
-		System.out.println("downloading " + url.toString() + " file: " + filename);
-		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, url, filename);
+	public DownloadTask download(String url, String filename, History history) {
+		logger.info("downloading " + url.toString() + " file: " + filename);
+		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, url, filename, history);
 		DownloadTask downloadTask = new DownloadTask(downloadRunnable);
 		exec.execute(downloadTask);
 		return downloadTask;
@@ -43,14 +44,18 @@ public enum Downloader {
  
 class DownloadRunnable implements Callable<Integer>
 {
+	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	AbstractHttpClient httpClient;
-	public String  source;
+	String  source;
 	public String destination;
+	History history;
 	
-	DownloadRunnable(AbstractHttpClient httpClient, String url, String destination) {
+	DownloadRunnable(AbstractHttpClient httpClient, String url, String destination, History history) {
 		this.httpClient = httpClient;
 		this.source = url;
 		this.destination = destination;
+		this.history = history;
+		
 	}
 	
 
@@ -68,16 +73,10 @@ class DownloadRunnable implements Callable<Integer>
 	        IOUtils.copy(input, outputStream);
 	        outputStream.close();
 	        input.close();
-	        System.out.println("written: " + destination);
+	        logger.info("written: " + destination);
 	        
-		} catch (ClientProtocolException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.info("exception: ", e);
 		}
 		return 1;
 	}

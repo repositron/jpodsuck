@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
@@ -31,6 +32,7 @@ public class ChannelProcessor {
 	private URL urlChannel;
 	private String saveToRootFolder;
 	private Path saveFolder;
+	private History history;
 	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
@@ -46,10 +48,10 @@ public class ChannelProcessor {
 	void loadHistory() {
 		
 	}
-	PodcastsInterface getPodcasts(byte[] b) throws Exception {
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(b)))) {
+	PodcastsInterface getPodcasts(String s) throws Exception {
+		try (StringReader sr = new StringReader(s)) {
 			PodcastsInterface podcasts = new Podcasts();
-		    RssXmlParser parser = new RssXmlParser(br, podcasts);
+		    RssXmlParser parser = new RssXmlParser(sr, podcasts);
 		    parser.parse();
 		    return podcasts;
 		}
@@ -57,14 +59,17 @@ public class ChannelProcessor {
 			throw e;
 		}
 	}
-	void saveRssFile(String channelTitle, byte[] b) throws Exception {
+	void saveRssFile(String channelTitle, String rssData) throws Exception {
 		final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
-	    String rssFileName = channelTitle + "_" + isoFormat.format(new GregorianCalendar().getTime());
+	    String rssFileName = channelTitle + "_" + isoFormat.format(new GregorianCalendar().getTime()) + ".xml";
 	    Path rssFilePath = Paths.get(saveFolder.toString(), "rssBackup");//, rssFileName);
-	    Files.createDirectory(rssFilePath);
+	    if (Files.notExists(rssFilePath, LinkOption.NOFOLLOW_LINKS))
+		{
+	    	Files.createDirectory(rssFilePath);
+		}
 	    rssFilePath = Paths.get(rssFilePath.toString(), rssFileName);
 	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(rssFilePath.toFile()))) {
-	    	writer.write(b.toString());
+	    	writer.write(rssData);
 	    } catch (Exception e) {
 	    	throw e;
 	    }
@@ -82,7 +87,8 @@ public class ChannelProcessor {
 		    // download rss file to memory stream.
 		    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 		    IOUtils.copy(reader, byteStream);
-		    PodcastsInterface podcasts = getPodcasts(byteStream.toByteArray());
+		    String rss = byteStream.toString("UTF-8");
+		    PodcastsInterface podcasts = getPodcasts(rss);
 		    
 		    final String throwAwayStr = "JapanesePod101.com | My Feed - ";
 		    String channelTitle = podcasts.getChannelTitle();
@@ -98,9 +104,10 @@ public class ChannelProcessor {
 		    if (Files.notExists(saveFolder, LinkOption.NOFOLLOW_LINKS)) {
 		    	Files.createDirectory(saveFolder);
 		    }
-		    Visitor visitor = new Visitor();
+		    //this.history = History.get(saveFolder, channelTitle);
+		    Visitor visitor = new Visitor(this.history);
 		    podcasts.accept(visitor);
-		    saveRssFile(folder, byteStream.toByteArray());
+		    saveRssFile(folder, rss);
 		   
 		} catch (Exception e) {
 			logger.error("downloadRssFile exception", e);
@@ -129,31 +136,20 @@ public class ChannelProcessor {
 	}
 	class Visitor implements PodcastVisitor 
 	{
+		History history;
+		Visitor(History history) {
+			this.history = history;
+		}
 		@Override
 		public void visit(Item item) {
 			try {
 				URL url =  new URL(item.url); // validate url
 				Path savePath = Paths.get(ChannelProcessor.this.saveFolder.toString(), FilenameUtils.getName(url.getPath()));
-				boolean download = false;
-				
-				if (Files.exists(savePath, LinkOption.NOFOLLOW_LINKS))
+
+				if (history.needToDownload(savePath, item.length))
 				{
-					if (Files.size(savePath) != item.length)
-					{
-						logger.info(savePath.toString() + "already exists but size is different origSize:" + Files.size(savePath) + "newSize:" + item.length);
-						download = true;
-					}
-				}
-				else
-				{
-					logger.info(savePath.toString() + "doesn't exist  ");
-					download = true;
-					
-				}
-				if (download)
-				{
-					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString()));
-					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + ChannelProcessor.this.downloads.size());
+					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString(), history));
+					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}
 			} catch (MalformedURLException e) {
 				logger.error("malformed url" + item.url, e);
