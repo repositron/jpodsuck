@@ -41,42 +41,89 @@ public class HistoryTest {
 		Path p = Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath();
 		if (Files.exists(p))
 			p.toFile().delete();
+		
+		Path dest2 = Paths.get("dlfiles/a2/.history");
+		if (Files.exists(dest2))
+			dest2.toFile().delete();
 	}
 
 	@After
 	public void tearDown() throws Exception {
 	}
 
+	boolean needToDownload(History h, Path p, URL url, long l) throws IOException {
+		History.FileHistory fh = h.getFileHistory(p, url, l);
+		return fh.needToDownload;
+	}
+	
 	@Test
-	public final void test() {
+	public final void test1() {
 		try {
 			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
-			Assert.assertFalse(h.needToDownload(Paths.get("dlfiles/a1/file1.mp3").toAbsolutePath(), 18));
-			Assert.assertTrue(h.needToDownload(Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), 10));
-			Assert.assertTrue(h.needToDownload(Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), 10));
-			h.recordFileWritten(Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), new URL("http://jp.com/file2.mp3"), true, 2);
-			h.recordFileWritten(Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), new URL("http://jp.com/file3.mp3"), true, 10);
-			h.writeHistory();
+			Assert.assertFalse(needToDownload(h, Paths.get("dlfiles/a1/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 18));
+			History.FileHistory fh2 = h.getFileHistory(Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), new URL("http://jp.com/file2.mp3"), 10);
+			Assert.assertTrue(fh2.needToDownload);
+			History.FileHistory fh3 = h.getFileHistory(Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), new URL("http://jp.com/file3.mp3"), 10);
+			Assert.assertTrue(fh3.needToDownload);
+
+			Path file2 = Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath();
+			Path file3 = Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath();
+			fh2.success = true;
+			fh2.rssSize = 2;
+			fh2.fileSize =  Files.size(file2);
+			
 			try (FileWriter f3 = new FileWriter(Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath().toFile())) {
 				
 				char tenchars[] = new char[10];
 				Arrays.fill(tenchars, 'a');
 				f3.write(tenchars);	
 			}
+			fh3.success = true;
+			fh3.rssSize = 10;
+			fh3.fileSize =  Files.size(file3);
+
+			h.writeHistory();
 			
-			History h2 = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
-			Assert.assertFalse(h2.needToDownload(Paths.get("dlfiles/a1/file1.mp3").toAbsolutePath(), 18));
-			Assert.assertFalse(h2.needToDownload(Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), 2));
-			Assert.assertFalse(h2.needToDownload(Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), 10));
-			
-		} catch (FileNotFoundException e) {
+		} catch (Exception e) {
+			e.printStackTrace();
 			fail("exception");
+		}
+
+		try {
+			History h2 = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
+			Assert.assertFalse(needToDownload(h2, Paths.get("dlfiles/a1/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 18));
+			Assert.assertFalse(needToDownload(h2, Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), new URL("http://jp.com/file2.mp3"), 2));
+			Assert.assertFalse(needToDownload(h2, Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), new URL("http://jp.com/file3.mp3"), 10));
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+
+	}
+	@Test
+	public final void nohistoryfile() {
+		try {
+			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a2");
+			
+			History.FileHistory fh = h.getFileHistory(Paths.get("dlfiles/a2/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 4);
+			Assert.assertTrue(fh.needToDownload);
+
+			fh.success = true;
+			fh.rssSize = 5;
+			fh.fileSize = Files.size(Paths.get("dlfiles/a2/file1.mp3").toAbsolutePath());
+			h.writeHistory();
+		} catch (IOException e) {
+			e.printStackTrace();
+			fail("exception");
+		}
+		try {
+			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a2");
+			History.FileHistory fh = h.getFileHistory(Paths.get("dlfiles/a2/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 5);
+			Assert.assertFalse(fh.needToDownload);		
+			h.writeHistory();
 		} catch (IOException e) {
 			e.printStackTrace();
 			fail("exception");
 		}
 	}
-
 }

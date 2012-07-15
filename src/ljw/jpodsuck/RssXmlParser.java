@@ -1,6 +1,5 @@
 package ljw.jpodsuck;
 import java.io.Reader;
-import org.xml.sax.ContentHandler;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;

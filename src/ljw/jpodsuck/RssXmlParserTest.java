@@ -2,7 +2,6 @@ package ljw.jpodsuck;
 import static org.junit.Assert.*;
 
 import java.io.FileNotFoundException;
-import java.io.StringReader;
 import java.io.Reader;
 import java.io.FileReader;
 import java.util.Map;

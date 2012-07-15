@@ -1,31 +1,18 @@
 package ljw.jpodsuck;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
-import java.io.BufferedReader;
-
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
-import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.xml.DOMConfigurator;
-import org.apache.commons.codec.*;
+
 
 public class Top {
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
@@ -70,6 +57,7 @@ public class Top {
 					while (it.hasNext()) {
 						ChannelProcessor cp = it.next();
 						if (cp.isFinished()) {
+							cp.writeHistory();
 							cp.writePlayList();
 							it.remove();
 						}

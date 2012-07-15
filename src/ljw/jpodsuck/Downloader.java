@@ -6,16 +6,15 @@ import java.util.concurrent.Executors;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.AbstractHttpClient;
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
@@ -30,9 +29,9 @@ public enum Downloader {
 		this.httpClient = httpClient;
 	}
 	
-	public DownloadTask download(String url, String filename, History history) {
-		logger.info("downloading " + url.toString() + " file: " + filename);
-		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, url, filename, history);
+	public DownloadTask download(History.FileHistory fileHistory) {
+		logger.info("downloading " + fileHistory.url.toString() + " file: " + fileHistory.filePath.toString());
+		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, fileHistory);
 		DownloadTask downloadTask = new DownloadTask(downloadRunnable);
 		exec.execute(downloadTask);
 		return downloadTask;
@@ -44,45 +43,43 @@ public enum Downloader {
 	
 }
  
-class DownloadRunnable implements Callable<Integer>
+class DownloadRunnable implements Callable<History.FileHistory>
 {
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	AbstractHttpClient httpClient;
-	String  source;
-	public String destination;
-	History history;
+	long rssSize;
+	History.FileHistory fileHistory;
 	
-	DownloadRunnable(AbstractHttpClient httpClient, String url, String destination, History history) {
+	
+	DownloadRunnable(AbstractHttpClient httpClient, History.FileHistory fileHistory) { 
 		this.httpClient = httpClient;
-		this.source = url;
-		this.destination = destination;
-		this.history = history;
-		
+		this.fileHistory = fileHistory;
 	}
 	
-
 	@Override
-	public Integer call() throws Exception {
+	public History.FileHistory call() throws Exception {
 		HttpResponse response;
 		try {
-			System.out.println("call(): " + source);
-			HttpGet httpget = new HttpGet(source);
+			logger.info("call(): " + fileHistory.url);
+			fileHistory.attempts++;
+			HttpGet httpget = new HttpGet(fileHistory.url.toURI());
 			response = httpClient.execute(httpget);
 			HttpEntity entity = response.getEntity();
-	        File f = new File(destination);
-	        FileOutputStream outputStream = new FileOutputStream(f);
+	        FileOutputStream outputStream = new FileOutputStream(fileHistory.filePath.toFile());
 	        InputStream input = entity.getContent();
 	        IOUtils.copy(input, outputStream);
 	        outputStream.close();
 	        input.close();
-	        history.recordFileWritten(Paths.get(destination), new URL(source), true, 0 /*TODO: need rss size*/);
-	        logger.info("written: " + destination);
+	        fileHistory.success = true;
+	        fileHistory.fileSize = Files.size(fileHistory.filePath);
+	        logger.info("written: " + fileHistory.filePath);
 	        
 		} catch (Exception e) {
-			history.recordFileWritten(Paths.get(destination), new URL(source), false, 0);
+			fileHistory.success = false;
+			fileHistory.fileSize = 0;
 			logger.info("exception: ", e);
 		}
-		return 1;
+		return fileHistory;
 	}
 	
 }

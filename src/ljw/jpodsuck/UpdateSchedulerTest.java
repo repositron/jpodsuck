@@ -2,7 +2,6 @@ package ljw.jpodsuck;
 
 import static org.junit.Assert.*;
 
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -13,15 +12,12 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 
 public class UpdateSchedulerTest {
 
-	private UpdateScheduler us;
 	final private SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
 	final private Path time2Path = Paths.get("testfiles/time2.txt");
 	final private Calendar c1980 = new GregorianCalendar(1980, 01, 01, 12, 12);

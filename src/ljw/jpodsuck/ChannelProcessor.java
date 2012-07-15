@@ -1,22 +1,19 @@
 package ljw.jpodsuck;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutionException;
 import java.nio.file.*;
-import java.nio.file.attribute.FileAttribute;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -40,14 +37,12 @@ public class ChannelProcessor {
 		this.httpclient = httpclient;
 		this.urlChannel = urlChannel;
 		this.saveToRootFolder = saveToRootFolder;
+
 	}
 	public void process() {
-		loadHistory();
 		downloadRssFile();
 	}
-	void loadHistory() {
-		
-	}
+
 	PodcastsInterface getPodcasts(String s) throws Exception {
 		try (StringReader sr = new StringReader(s)) {
 			PodcastsInterface podcasts = new Podcasts();
@@ -104,6 +99,7 @@ public class ChannelProcessor {
 		    if (Files.notExists(saveFolder, LinkOption.NOFOLLOW_LINKS)) {
 		    	Files.createDirectory(saveFolder);
 		    }
+		    this.history = new History(Paths.get(saveToRootFolder), folder);
 		    Visitor visitor = new Visitor(this.history);
 		    podcasts.accept(visitor);
 		    saveRssFile(folder, rss);
@@ -113,22 +109,25 @@ public class ChannelProcessor {
 		}
 	}
 	public Boolean isFinished() {
-		// iterate through work requests removing ones which has finished
+		// iterate through work requests removing ones which has finished and records any downloads
 		Iterator<Map.Entry<String, DownloadTask>> it = downloads.entrySet().iterator();
 		while (it.hasNext()) {
 			Map.Entry<String, DownloadTask> entry = it.next();
 			if (entry.getValue().isDone())
 			{
-				logger.info("finished dl " + entry.getKey().toString());
-				it.remove();
+				try {
+					logger.info("finished dl " + entry.getKey().toString());
+					it.remove();
+				} catch (Exception e) {
+					logger.error("isFinished", e);
+				}
 			}
 		}
 		return downloads.isEmpty();
 	}
-	public void close() {
-		
+	public void writeHistory() {
+		history.writeHistory();
 	}
-	
 	public void writePlayList() {
 		PlayList pl = new PlayList(saveFolder);
 		pl.create();
@@ -144,10 +143,10 @@ public class ChannelProcessor {
 			try {
 				URL url =  new URL(item.url); // validate url
 				Path savePath = Paths.get(ChannelProcessor.this.saveFolder.toString(), FilenameUtils.getName(url.getPath()));
-
-				if (history.needToDownload(savePath, item.length))
+				History.FileHistory fh = history.getFileHistory(savePath, url, item.length); 
+				if (fh.needToDownload)
 				{
-					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(url.toString(), savePath.toString(), history));
+					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}
 			} catch (MalformedURLException e) {

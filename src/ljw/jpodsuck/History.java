@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -14,11 +15,11 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.TreeMap;
-import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import ljw.jpodsuck.History.FileHistory;
 
 import org.apache.log4j.Logger;
 
@@ -39,19 +40,20 @@ public class History {
 		if (Files.exists(historyPath)) {
 			try (BufferedReader bReader = new BufferedReader(new FileReader(this.historyPath.toFile())))		
 			{
-				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),(\\d+),(true|false),(\\d+)$");
+				// file path, url, size from rss, size on disk, success, attempts
+				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),rss_size=(\\d+),size=(\\d+),(true|false),(\\d+)$");
 				String line;
 				while ((line = bReader.readLine()) != null) {
 					Matcher m = pattern.matcher(line);
-					if (m.matches() && m.groupCount() == 5)
+					if (m.matches() && m.groupCount() == 6)
 					{
-						String a = m.group(1);
 						FileHistory fH = new FileHistory();
 						fH.filePath = Paths.get(m.group(1));
 						fH.url = new URL(m.group(2));
-						fH.size = Integer.parseInt(m.group(3));
-						fH.success = Boolean.parseBoolean(m.group(4));
-						fH.attempts = Integer.parseInt(m.group(5));
+						fH.rssSize = Integer.parseInt(m.group(3));
+						fH.fileSize = Integer.parseInt(m.group(4));
+						fH.success = Boolean.parseBoolean(m.group(5));
+						fH.attempts = Integer.parseInt(m.group(6));
 						filesHistory.put(fH.filePath, fH);
 					}
 				}	
@@ -65,15 +67,15 @@ public class History {
 			}
 			historyPath.toFile().renameTo(historyBackupPath.toFile());
 		}
-		try (BufferedWriter bWriter = new BufferedWriter(new FileWriter(historyPath.toFile()))) {
+		try (PrintWriter writer = new PrintWriter(new FileWriter(historyPath.toFile()))) {
 			for (Map.Entry<Path, FileHistory>  entry : filesHistory.entrySet()) {
 				FileHistory h = entry.getValue();
-				bWriter.write("\"" + h.filePath.toString() + "\"," + h.url.toString() + "," + h.size + "," + Boolean.toString(h.success) + "," + h.attempts);
-				bWriter.newLine();
+				writer.format("\"%s\",%s,rss_size=%d,size=%d,%b,%d",
+						h.filePath.toString(), h.url.toString(), h.rssSize, h.fileSize, h.success, h.attempts);
+				writer.println();
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("writeHistory", e);
 		}
 	}
 	public void saveRss(String rssFile) throws IOException {
@@ -90,57 +92,52 @@ public class History {
 	    	throw e;
 	    }
 	}
-	public void recordFileWritten(Path filePath, URL url, boolean success, int Size) {
-		FileHistory fileHistory = filesHistory.get(filePath);
-		if (fileHistory == null) {
-			fileHistory = new FileHistory();
-			fileHistory.filePath = filePath;
-			fileHistory.attempts = 1;
-			filesHistory.put(filePath, fileHistory);
-		}			
-		fileHistory.success = success;
-		if (!success)
-			fileHistory.size = 0;
-		else
-			fileHistory.size = Size;
-		fileHistory.url = url;
-	}
-	void write() {
-		
-	}
+
 	String findlastSaveRssFile() {
 		String file = "";
 		return file;
 	}
-	void loadPrevRssFile() {
-		
-	}
 	
-	boolean needToDownload(Path file, int rssLength) throws IOException {
-		boolean download = false;
-		if (Files.exists(file, LinkOption.NOFOLLOW_LINKS))
+	private void needToDownload(FileHistory fileHistory, long latestRssLength) throws IOException {
+		fileHistory.needToDownload = false;
+		if (Files.exists(fileHistory.filePath, LinkOption.NOFOLLOW_LINKS))
 		{
-			if (Files.size(file) != rssLength)
+			if (Files.size(fileHistory.filePath) != latestRssLength)
 			{
-				logger.info(file.toString() + " Already exists but size is different origSize: " + Files.size(file) + " newSize:" + rssLength);
-				FileHistory fH = filesHistory.get(file);
-				if (fH != null) {
-					if (rssLength != fH.size) {
-						download = true;
-					}
+				logger.info(fileHistory.filePath.toString() + " Already exists but size is different origSize: " + Files.size(fileHistory.filePath) + " newSize:" + fileHistory.rssSize);
+				if (latestRssLength != fileHistory.rssSize) {
+					// the rsslength has changed
+					fileHistory.rssSize = latestRssLength;
+					fileHistory.needToDownload = true;
 				}
-				else
-					download = true;
 			}
 		}
 		else
 		{
-			logger.info(file.toString() + " doesn't exist");
-			download = true;
+			logger.info(fileHistory.filePath.toString() + " doesn't exist");
+			fileHistory.needToDownload = true;
 			
 		}
-		return download;
 	}
+	
+	public FileHistory getFileHistory(Path savePath, URL url, long rssLength) throws IOException {
+		FileHistory fileHistory = filesHistory.get(savePath);
+		if (fileHistory == null) {
+			fileHistory = new FileHistory();
+			fileHistory.filePath = savePath;
+			fileHistory.url = url;
+			fileHistory.rssSize = rssLength;
+			fileHistory.fileSize = 0;
+			fileHistory.attempts = 0;
+			fileHistory.success = false;
+			fileHistory.needToDownload = true; // assume we haven't downloaded it
+			filesHistory.put(savePath, fileHistory);
+		}
+		else
+			needToDownload(fileHistory, rssLength);
+		return fileHistory;
+	}
+
 	void close() {
 		
 	}
@@ -148,10 +145,11 @@ public class History {
 	class FileHistory {
 		Path filePath;
 		URL url;
-		int size;
+		long rssSize;
+		long fileSize;
 		boolean success;
 		int attempts;
-		
+		boolean needToDownload;
 	}
-	
+
 }

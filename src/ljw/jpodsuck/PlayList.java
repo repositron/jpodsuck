@@ -6,19 +6,11 @@ import java.nio.file.*;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.MatchResult;
 
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
-import org.jaudiotagger.audio.exceptions.CannotReadException;
-import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
-import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
-import org.jaudiotagger.tag.TagOptionSingleton;
-import org.jaudiotagger.*;
 import org.thirdparty.alphanumeric.AlphanumComparator;
 
 
