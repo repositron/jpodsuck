@@ -42,7 +42,11 @@ public class PlayList {
 						title = tag.getFirst(FieldKey.TITLE);
 					
 					else
+					{
+						// TODO should use title from rss
 						title = fileName;
+						
+					}
 					PlayListEntry playListEntry = new PlayListEntry(title, f.getAudioHeader().getTrackLength());
 					mp3s.put(fileName, playListEntry);
 					System.out.println("mp3: " + playListEntry.title + ", " + playListEntry.length);

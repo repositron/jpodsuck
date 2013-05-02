@@ -10,11 +10,10 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.AbstractHttpClient;
 import org.apache.log4j.Logger;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
@@ -30,7 +29,7 @@ public enum Downloader {
 	}
 	
 	public DownloadTask download(History.FileHistory fileHistory) {
-		logger.info("downloading " + fileHistory.url.toString() + " file: " + fileHistory.filePath.toString());
+		logger.info("downloading " + fileHistory.url.toString() + " file: " + fileHistory.fileName);
 		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, fileHistory);
 		DownloadTask downloadTask = new DownloadTask(downloadRunnable);
 		exec.execute(downloadTask);
@@ -65,14 +64,18 @@ class DownloadRunnable implements Callable<History.FileHistory>
 			HttpGet httpget = new HttpGet(fileHistory.url.toURI());
 			response = httpClient.execute(httpget);
 			HttpEntity entity = response.getEntity();
-	        FileOutputStream outputStream = new FileOutputStream(fileHistory.filePath.toFile());
-	        InputStream input = entity.getContent();
-	        IOUtils.copy(input, outputStream);
-	        outputStream.close();
-	        input.close();
+	        try (FileOutputStream outputStream = new FileOutputStream(fileHistory.fileName))
+	        {
+	        	InputStream input = entity.getContent();
+	        	IOUtils.copy(input, outputStream);
+	        	outputStream.close();
+	        	input.close();
+	        } catch (Exception e) {
+	        	logger.info("exception: ", e);
+	        }
 	        fileHistory.success = true;
-	        fileHistory.fileSize = Files.size(fileHistory.filePath);
-	        logger.info("written: " + fileHistory.filePath);
+	        fileHistory.fileSize = Files.size(Paths.get(fileHistory.fileName));
+	        logger.info("written: " + fileHistory.fileName);
 	        
 		} catch (Exception e) {
 			fileHistory.success = false;

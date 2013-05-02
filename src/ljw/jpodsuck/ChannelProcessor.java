@@ -12,7 +12,6 @@ import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 import java.nio.file.*;
 
 import org.apache.http.HttpEntity;
@@ -30,6 +29,7 @@ public class ChannelProcessor {
 	private String saveToRootFolder;
 	private Path saveFolder;
 	private History history;
+	private Boolean changes = false;
 	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
@@ -37,7 +37,6 @@ public class ChannelProcessor {
 		this.httpclient = httpclient;
 		this.urlChannel = urlChannel;
 		this.saveToRootFolder = saveToRootFolder;
-
 	}
 	public void process() {
 		downloadRssFile();
@@ -125,13 +124,16 @@ public class ChannelProcessor {
 		}
 		return downloads.isEmpty();
 	}
-	public void writeHistory() {
-		history.writeHistory();
+	public void doPostActions()
+	{
+		if (changes) {
+			logger.info("changes detected updating history and playlists");
+			history.writeHistory();
+			PlayList pl = new PlayList(saveFolder);
+			pl.create();
+		}
 	}
-	public void writePlayList() {
-		PlayList pl = new PlayList(saveFolder);
-		pl.create();
-	}
+	
 	class Visitor implements PodcastVisitor 
 	{
 		History history;
@@ -143,9 +145,10 @@ public class ChannelProcessor {
 			try {
 				URL url =  new URL(item.url); // validate url
 				Path savePath = Paths.get(ChannelProcessor.this.saveFolder.toString(), FilenameUtils.getName(url.getPath()));
-				History.FileHistory fh = history.getFileHistory(savePath, url, item.length); 
+				History.FileHistory fh = history.getFileHistory(savePath.toString(), url, item.length); 
 				if (fh.needToDownload)
 				{
+					ChannelProcessor.this.changes = true;
 					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}

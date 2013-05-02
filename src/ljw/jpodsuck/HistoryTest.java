@@ -3,7 +3,6 @@ package ljw.jpodsuck;
 import static org.junit.Assert.*;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -51,8 +50,8 @@ public class HistoryTest {
 	public void tearDown() throws Exception {
 	}
 
-	boolean needToDownload(History h, Path p, URL url, long l) throws IOException {
-		History.FileHistory fh = h.getFileHistory(p, url, l);
+	boolean needToDownload(History h, String filename, URL url, long l) throws IOException {
+		History.FileHistory fh = h.getFileHistory(filename, url, l);
 		return fh.needToDownload;
 	}
 	
@@ -60,10 +59,10 @@ public class HistoryTest {
 	public final void test1() {
 		try {
 			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
-			Assert.assertFalse(needToDownload(h, Paths.get("dlfiles/a1/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 18));
-			History.FileHistory fh2 = h.getFileHistory(Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), new URL("http://jp.com/file2.mp3"), 10);
+			Assert.assertFalse(needToDownload(h, "file1.mp3", new URL("http://jp.com/file1.mp3"), 18));
+			History.FileHistory fh2 = h.getFileHistory("file2.mp3", new URL("http://jp.com/file2.mp3"), 10);
 			Assert.assertTrue(fh2.needToDownload);
-			History.FileHistory fh3 = h.getFileHistory(Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), new URL("http://jp.com/file3.mp3"), 10);
+			History.FileHistory fh3 = h.getFileHistory("file3.mp3", new URL("http://jp.com/file3.mp3"), 10);
 			Assert.assertTrue(fh3.needToDownload);
 
 			Path file2 = Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath();
@@ -91,9 +90,9 @@ public class HistoryTest {
 
 		try {
 			History h2 = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
-			Assert.assertFalse(needToDownload(h2, Paths.get("dlfiles/a1/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 18));
-			Assert.assertFalse(needToDownload(h2, Paths.get("dlfiles/a1/file2.mp3").toAbsolutePath(), new URL("http://jp.com/file2.mp3"), 2));
-			Assert.assertFalse(needToDownload(h2, Paths.get("dlfiles/a1/file3.mp3").toAbsolutePath(), new URL("http://jp.com/file3.mp3"), 10));
+			Assert.assertFalse(needToDownload(h2, "file1.mp3", new URL("http://jp.com/file1.mp3"), 18));
+			Assert.assertFalse(needToDownload(h2, "file2.mp3", new URL("http://jp.com/file2.mp3"), 2));
+			Assert.assertFalse(needToDownload(h2, "file3.mp3", new URL("http://jp.com/file3.mp3"), 10));
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -105,7 +104,7 @@ public class HistoryTest {
 		try {
 			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a2");
 			
-			History.FileHistory fh = h.getFileHistory(Paths.get("dlfiles/a2/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 4);
+			History.FileHistory fh = h.getFileHistory("file1.mp3", new URL("http://jp.com/file1.mp3"), 4);
 			Assert.assertTrue(fh.needToDownload);
 
 			fh.success = true;
@@ -118,7 +117,7 @@ public class HistoryTest {
 		}
 		try {
 			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a2");
-			History.FileHistory fh = h.getFileHistory(Paths.get("dlfiles/a2/file1.mp3").toAbsolutePath(), new URL("http://jp.com/file1.mp3"), 5);
+			History.FileHistory fh = h.getFileHistory("file1.mp3", new URL("http://jp.com/file1.mp3"), 5);
 			Assert.assertFalse(fh.needToDownload);		
 			h.writeHistory();
 		} catch (IOException e) {

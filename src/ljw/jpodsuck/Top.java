@@ -27,7 +27,8 @@ public class Top {
 			config = mapper.readValue(new File("config.json"), Config.class);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			logger.error("cannot open config file.");
+			
+			logger.error("cannot open config file. " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
@@ -57,15 +58,14 @@ public class Top {
 					while (it.hasNext()) {
 						ChannelProcessor cp = it.next();
 						if (cp.isFinished()) {
-							cp.writeHistory();
-							cp.writePlayList();
+							cp.doPostActions();
 							it.remove();
 						}
 					}
 					Thread.sleep(30);
 				}
 				
-	            System.out.println("----------------------------------------");
+				logger.info("----------------------------------------");
 
 	        } catch (Exception e) {
 	        	logger.error("Exception ", e);
