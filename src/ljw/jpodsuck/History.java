@@ -21,14 +21,14 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
 public class History {
-	Path rssFolderPath;
-	Path historyPath;
-	Path historyBackupPath;
-	Path folderPath;
-	String channelTitle;
+	private Path rssFolderPath;
+	private Path historyPath;
+	private Path historyBackupPath;
+	private Path folderPath;
+	private String channelTitle;
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 
-	Map<String, FileHistory> filesHistory = new TreeMap<String, FileHistory>();
+	private Map<String, FileHistory> filesHistory = new TreeMap<String, FileHistory>();
 
 	History(Path folder, String channelTitle) throws FileNotFoundException, IOException {
 		this.rssFolderPath = Paths.get(folder.toString(), "rssBackup");
@@ -40,19 +40,20 @@ public class History {
 			try (BufferedReader bReader = new BufferedReader(new FileReader(this.historyPath.toFile())))		
 			{
 				// file path, url, size from rss, size on disk, success, attempts
-				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),rss_size=(\\d+),size=(\\d+),(true|false),(\\d+)$");
+				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),nf=(.+),rss_size=(\\d+),size=(\\d+),(true|false),(\\d+)$");
 				String line;
 				while ((line = bReader.readLine()) != null) {
 					Matcher m = pattern.matcher(line);
-					if (m.matches() && m.groupCount() == 6)
+					if (m.matches() && m.groupCount() == 7)
 					{
 						FileHistory fH = new FileHistory();
 						fH.fileName = m.group(1);
 						fH.url = new URL(m.group(2));
-						fH.rssSize = Integer.parseInt(m.group(3));
-						fH.fileSize = Integer.parseInt(m.group(4));
-						fH.success = Boolean.parseBoolean(m.group(5));
-						fH.attempts = Integer.parseInt(m.group(6));
+						fH.niceFilename = m.group(3);
+						fH.rssSize = Integer.parseInt(m.group(4));
+						fH.fileSize = Integer.parseInt(m.group(5));
+						fH.success = Boolean.parseBoolean(m.group(6));
+						fH.attempts = Integer.parseInt(m.group(7));
 						filesHistory.put(fH.fileName, fH);
 					}
 				}	
@@ -145,6 +146,7 @@ public class History {
 	class FileHistory {
 		String fileName;
 		URL url;
+		String niceFilename;
 		long rssSize;
 		long fileSize;
 		boolean success;
