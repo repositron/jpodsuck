@@ -3,6 +3,7 @@ package ljw.jpodsuck;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -17,6 +18,18 @@ import java.nio.file.Paths;
 
 import org.apache.commons.io.IOUtils;
 
+class DownloadTask extends FutureTask<History.FileHistory> {
+	ChannelProcessor.FileProcessing fileProcessing;
+	DownloadTask(Callable<History.FileHistory> callable, ChannelProcessor.FileProcessing fileProcessing) {
+		super(callable);
+		this.fileProcessing = fileProcessing;
+	}
+	@Override
+	protected void done() {
+		fileProcessing.onSave();
+	}
+}
+
 public enum Downloader {
 	INSTANCE;
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
@@ -27,10 +40,10 @@ public enum Downloader {
 		this.httpClient = httpClient;
 	}
 	
-	public DownloadTask download(History.FileHistory fileHistory) {
+	public DownloadTask download(History.FileHistory fileHistory, ChannelProcessor.FileProcessing fileProcessing) {
 		logger.info("downloading " + fileHistory.url.toString() + " file: " + fileHistory.fileName);
 		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, fileHistory);
-		DownloadTask downloadTask = new DownloadTask(downloadRunnable);
+		DownloadTask downloadTask = new DownloadTask(downloadRunnable, fileProcessing);
 		exec.execute(downloadTask);
 		return downloadTask;
 	}
@@ -71,6 +84,7 @@ class DownloadRunnable implements Callable<History.FileHistory>
 	        	input.close();
 	        } catch (Exception e) {
 	        	logger.info("exception: ", e);
+	        	throw e;
 	        }
 	        fileHistory.success = true;
 	        fileHistory.fileSize = Files.size(Paths.get(fileHistory.fileName));

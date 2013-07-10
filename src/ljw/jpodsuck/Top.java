@@ -26,8 +26,6 @@ public class Top {
 		try {
 			config = mapper.readValue(new File("config.json"), Config.class);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			
 			logger.error("cannot open config file. " + e.getMessage());
 			e.printStackTrace();
 		}

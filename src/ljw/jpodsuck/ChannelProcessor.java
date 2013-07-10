@@ -133,7 +133,10 @@ public class ChannelProcessor {
 			pl.create();
 		}
 	}
-	
+	interface FileProcessing
+	{
+		public void onSave();
+	}
 	class Visitor implements PodcastVisitor 
 	{
 		History history;
@@ -149,7 +152,18 @@ public class ChannelProcessor {
 				if (fh.needToDownload)
 				{
 					ChannelProcessor.this.changes = true;
-					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh));
+					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh, new FileProcessing() {
+						private Item item;
+						@Override
+						public void onSave() {
+							logger.info(this.item.title);
+						}
+						private FileProcessing init(Item item) {
+							this.item = item;
+							return this;
+						}
+					}.init(item)
+					));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}
 			} catch (MalformedURLException e) {
