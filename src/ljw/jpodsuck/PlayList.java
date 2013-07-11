@@ -95,6 +95,7 @@ public class PlayList {
 			e.printStackTrace();
 		} 
 	}
+	
 	void writePlayList() {
 		try (Writer out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(playListFile.toFile()), "UTF-8"))) {
 			out.write("#EXTM3U\n");

@@ -9,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,6 +31,7 @@ public class ChannelProcessor {
 	private Path saveFolder;
 	private History history;
 	private Boolean changes = false;
+	private NiceNamer niceNamer = new NiceNamer(createAbbreviationList());
 	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
@@ -107,6 +109,17 @@ public class ChannelProcessor {
 			logger.error("downloadRssFile exception", e);
 		}
 	}
+	
+	Map<String, String> createAbbreviationList() {
+		Map<String, String> lookup = new HashMap<String, String>();
+		lookup.put("Lower Intermediate", "LI");
+		lookup.put("Intermediate Lesson", "Int");
+		lookup.put("Beginner", "Beg");
+		lookup.put("Japanese Culture Class", "Culture");
+		lookup.put("Upper Intermediate", "UI");
+		return lookup;
+	}
+	
 	public Boolean isFinished() {
 		// iterate through work requests removing ones which has finished and records any downloads
 		Iterator<Map.Entry<String, DownloadTask>> it = downloads.entrySet().iterator();
@@ -156,13 +169,15 @@ public class ChannelProcessor {
 						private Item item;
 						@Override
 						public void onSave() {
+							//ChannelProcessor.this.
+							
 							logger.info(this.item.title);
 						}
-						private FileProcessing init(Item item) {
+						private FileProcessing init(Item item, Path filePath) {
 							this.item = item;
 							return this;
 						}
-					}.init(item)
+					}.init(item, savePath)
 					));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}

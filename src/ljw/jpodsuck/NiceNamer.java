@@ -12,8 +12,8 @@ class NiceNamer {
 	}
 	public String makeTitle(String longTitle)
 	{
-		// hyphen used to separate track title from album name
-		int separator = longTitle.indexOf('-');   
+		// space hyphen space used to separate track title from album name
+		int separator = longTitle.indexOf(" - ");   
 		if (separator == -1) {
 			return longTitle;
 		}
@@ -29,6 +29,7 @@ class NiceNamer {
 		}
 	
 		if (niceTitle.length() == 0) {
+			niceTitle.append(longTitle);
 			return longTitle;
 		}
 		return niceTitle.toString();
