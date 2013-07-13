@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -76,12 +77,13 @@ class DownloadRunnable implements Callable<History.FileHistory>
 			HttpGet httpget = new HttpGet(fileHistory.url.toURI());
 			response = httpClient.execute(httpget);
 			HttpEntity entity = response.getEntity();
-	        try (FileOutputStream outputStream = new FileOutputStream(fileHistory.fileName))
-	        {
+			String downloadFileName = fileHistory.fileName + "~download";
+	        try (FileOutputStream outputStream = new FileOutputStream(downloadFileName)) {
 	        	InputStream input = entity.getContent();
 	        	IOUtils.copy(input, outputStream);
 	        	outputStream.close();
 	        	input.close();
+	        	Files.move(Paths.get(downloadFileName), Paths.get(fileHistory.fileName), StandardCopyOption.REPLACE_EXISTING);
 	        } catch (Exception e) {
 	        	logger.info("exception: ", e);
 	        	throw e;
