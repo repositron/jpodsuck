@@ -2,11 +2,14 @@ package ljw.jpodsuck;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.log4j.Logger;
 
 
 class NiceNamer {
-	private Map<String, String> abbreviatorLookup;  
+	private Map<String, String> abbreviatorLookup;
+	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	public NiceNamer(Map<String, String> abbreviatorLookup) {
 		this.abbreviatorLookup = abbreviatorLookup;
 	}
@@ -29,6 +32,7 @@ class NiceNamer {
 		}
 	
 		if (niceTitle.length() == 0) {
+			logger.error("could shorten title");
 			niceTitle.append(longTitle);
 			return longTitle;
 		}

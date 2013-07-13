@@ -3,6 +3,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
@@ -36,6 +37,7 @@ public class ChannelProcessor {
 	private History history;
 	private Boolean changes = false;
 	private PlayList playList;
+	final String downloadsInProgressFileName = "downloadsinprogress.txt";
 	private Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
 	static final NiceNamer niceNamer = new NiceNamer(createAbbreviationList());
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
@@ -46,7 +48,7 @@ public class ChannelProcessor {
 		this.saveToRootFolder = saveToRootFolder;
 	}
 	public void process() {
-		downloadRssFile();
+		downloadRssFileAndUpdate();
 	}
 
 	PodcastsInterface getPodcasts(String s) throws Exception {
@@ -65,8 +67,7 @@ public class ChannelProcessor {
 		final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
 	    String rssFileName = channelTitle + "_" + isoFormat.format(new GregorianCalendar().getTime()) + ".xml";
 	    Path rssFilePath = Paths.get(saveFolder.toString(), "rssBackup");//, rssFileName);
-	    if (Files.notExists(rssFilePath, LinkOption.NOFOLLOW_LINKS))
-		{
+	    if (Files.notExists(rssFilePath, LinkOption.NOFOLLOW_LINKS)) {
 	    	Files.createDirectory(rssFilePath);
 		}
 	    rssFilePath = Paths.get(rssFilePath.toString(), rssFileName);
@@ -77,7 +78,7 @@ public class ChannelProcessor {
 	    }    
 	}
 	
-	private void downloadRssFile() {
+	private void downloadRssFileAndUpdate() {
 		try {
 			logger.info("channel: " + urlChannel.toString());
 			HttpGet httpget = new HttpGet(urlChannel.toString());
@@ -98,13 +99,17 @@ public class ChannelProcessor {
 		    	folder = channelTitle.substring(throwAwayStr.length());	
 		    }
 		    else {
-		    	folder =  channelTitle;
+		    	folder = channelTitle;
 		    }
 		    saveFolder = Paths.get(saveToRootFolder, folder);
 		    if (Files.notExists(saveFolder, LinkOption.NOFOLLOW_LINKS)) {
 		    	Files.createDirectory(saveFolder);
 		    }
-			this.playList = new PlayList(saveFolder);
+		    boolean isDownloadsInProgress = isDownloadsInProgress();
+			this.playList = new PlayList(saveFolder, isDownloadsInProgress());
+			if (isDownloadsInProgress) {
+				removeDownloadsInProgress();
+			}
 		    this.history = new History(Paths.get(saveToRootFolder), folder);
 		    Visitor visitor = new Visitor(this.history);
 		    podcasts.accept(visitor); // visit all podcast items and process.
@@ -132,22 +137,47 @@ public class ChannelProcessor {
 		}
 		return downloads.isEmpty();
 	}
-	public void doPostActions()
+	private void setDownloadsInProgress() {
+		if (!this.changes)
+		{
+			try {
+				Paths.get(saveFolder.toString(), downloadsInProgressFileName).toFile().createNewFile();
+			} catch (IOException e) {
+				logger.error(e.getMessage());
+			}
+			this.changes = true;
+		}
+	}
+	private void removeDownloadsInProgress() {
+		if (!this.changes) {
+			logger.error("expected to be in downloads in progress state");
+		}
+		if (Paths.get(saveFolder.toString(), downloadsInProgressFileName).toFile().delete()) {
+			logger.error("downloads in progress file can't be deleted or does not exist");
+		}
+	}
+	private boolean isDownloadsInProgress() {
+		return Paths.get(saveFolder.toString(), downloadsInProgressFileName).toFile().exists();
+	}
+	
+	void doPostActions()
 	{
 		if (changes) {
 			logger.info("changes detected updating history and playlists");
 			history.writeHistory();
 			this.playList.create();
+			removeDownloadsInProgress();
 		}
 	}
 
 	final static Map<String, String> createAbbreviationList() {
 		Map<String, String> lookup = new HashMap<String, String>();
-		lookup.put("Lower Intermediate", "LI");
+		lookup.put("Lower Intermediate", "LInt");
 		lookup.put("Intermediate Lesson", "Int");
 		lookup.put("Beginner", "Beg");
 		lookup.put("Japanese Culture Class", "Culture");
-		lookup.put("Upper Intermediate", "UI");
+		lookup.put("Upper Intermediate", "UInt");
+		lookup.put("Upper Beginner", "UBeg");
 		return lookup;
 	}
 	
@@ -206,7 +236,7 @@ public class ChannelProcessor {
 				History.FileHistory fh = history.getFileHistory(savePath.toString(), url, item.length); 
 				if (fh.needToDownload)
 				{
-					ChannelProcessor.this.changes = true;
+					setDownloadsInProgress();
 					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh, new FileProcessing(item, savePath)));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}

@@ -7,17 +7,26 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 
+import org.apache.log4j.Logger;
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
 import org.thirdparty.alphanumeric.AlphanumComparator;
 
 
 class PlayList {
 	private Path playListFile;
 	private  Map<String, PlayListEntry> mp3s = new TreeMap<String, PlayListEntry>(new AlphanumComparator());
-	PlayList(Path folder) {
+	static Logger logger = Logger.getLogger("ljw.jpodsuck");
+	
+	PlayList(Path folder, boolean regenerate) {
 		if (folder.getNameCount() < 1)
 			throw new RuntimeException("Folder name error");
 		this.playListFile = Paths.get(folder.toString(), folder.getName(folder.getNameCount() - 1).toString() + ".m3u");
-		if (Files.exists(this.playListFile, LinkOption.NOFOLLOW_LINKS)) {
+		if (regenerate)
+			regenerate(folder);
+		else if (Files.exists(this.playListFile, LinkOption.NOFOLLOW_LINKS)) {
 			readPlayList();
 		}
 	}
@@ -30,6 +39,32 @@ class PlayList {
 	
 	void create() {
 		writePlayList();
+	}
+	
+	private void regenerate(Path folder) {
+		logger.info("regenerating playlist file in " + folder);
+		mp3s.clear();
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(folder, "*.mp3")) {
+			for (Path entry : stream) {
+				String fileName = entry.getFileName().toString();
+				System.out.println(entry);
+				if (!mp3s.containsKey(fileName)) {
+					AudioFile f = AudioFileIO.read(entry.toFile());
+					Tag tag = f.getTag();
+					String title;
+					if (tag != null) {
+						title = tag.getFirst(FieldKey.TITLE);
+					}
+					else {
+						title = fileName;
+					}
+					addMp3(fileName, title, f.getAudioHeader().getTrackLength());
+				}
+			}
+			writePlayList();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private void readPlayList() {
