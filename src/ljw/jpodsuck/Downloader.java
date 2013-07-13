@@ -19,7 +19,7 @@ import java.nio.file.Paths;
 import org.apache.commons.io.IOUtils;
 
 class DownloadTask extends FutureTask<History.FileHistory> {
-	ChannelProcessor.FileProcessing fileProcessing;
+	private ChannelProcessor.FileProcessing fileProcessing;
 	DownloadTask(Callable<History.FileHistory> callable, ChannelProcessor.FileProcessing fileProcessing) {
 		super(callable);
 		this.fileProcessing = fileProcessing;

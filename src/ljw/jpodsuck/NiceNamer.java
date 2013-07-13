@@ -8,7 +8,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 class NiceNamer {
 	private Map<String, String> abbreviatorLookup;  
 	public NiceNamer(Map<String, String> abbreviatorLookup) {
-			this.abbreviatorLookup = abbreviatorLookup;
+		this.abbreviatorLookup = abbreviatorLookup;
 	}
 	public String makeTitle(String longTitle)
 	{

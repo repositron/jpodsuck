@@ -22,6 +22,10 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.log4j.Logger;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
 
 public class ChannelProcessor {
 
@@ -31,8 +35,9 @@ public class ChannelProcessor {
 	private Path saveFolder;
 	private History history;
 	private Boolean changes = false;
-	private NiceNamer niceNamer = new NiceNamer(createAbbreviationList());
-	protected Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
+	private PlayList playList;
+	private Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
+	static final NiceNamer niceNamer = new NiceNamer(createAbbreviationList());
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
 	ChannelProcessor(DefaultHttpClient httpclient, URL urlChannel, String saveToRootFolder) {
@@ -55,7 +60,8 @@ public class ChannelProcessor {
 			throw e;
 		}
 	}
-	void saveRssFile(String channelTitle, String rssData) throws Exception {
+	
+	private void saveRssFile(String channelTitle, String rssData) throws Exception {
 		final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
 	    String rssFileName = channelTitle + "_" + isoFormat.format(new GregorianCalendar().getTime()) + ".xml";
 	    Path rssFilePath = Paths.get(saveFolder.toString(), "rssBackup");//, rssFileName);
@@ -68,11 +74,10 @@ public class ChannelProcessor {
 	    	writer.write(rssData);
 	    } catch (Exception e) {
 	    	throw e;
-	    }
-	    
+	    }    
 	}
 	
-	void downloadRssFile() {
+	private void downloadRssFile() {
 		try {
 			logger.info("channel: " + urlChannel.toString());
 			HttpGet httpget = new HttpGet(urlChannel.toString());
@@ -89,8 +94,7 @@ public class ChannelProcessor {
 		    final String throwAwayStr = "JapanesePod101.com | My Feed - ";
 		    String channelTitle = podcasts.getChannelTitle();
 		    String folder;
-		    if (channelTitle.startsWith(throwAwayStr))
-		    {
+		    if (channelTitle.startsWith(throwAwayStr)) {
 		    	folder = channelTitle.substring(throwAwayStr.length());	
 		    }
 		    else {
@@ -100,26 +104,17 @@ public class ChannelProcessor {
 		    if (Files.notExists(saveFolder, LinkOption.NOFOLLOW_LINKS)) {
 		    	Files.createDirectory(saveFolder);
 		    }
+			this.playList = new PlayList(saveFolder);
 		    this.history = new History(Paths.get(saveToRootFolder), folder);
 		    Visitor visitor = new Visitor(this.history);
-		    podcasts.accept(visitor);
+		    podcasts.accept(visitor); // visit all podcast items and process.
 		    saveRssFile(folder, rss);
 		   
 		} catch (Exception e) {
 			logger.error("downloadRssFile exception", e);
 		}
 	}
-	
-	Map<String, String> createAbbreviationList() {
-		Map<String, String> lookup = new HashMap<String, String>();
-		lookup.put("Lower Intermediate", "LI");
-		lookup.put("Intermediate Lesson", "Int");
-		lookup.put("Beginner", "Beg");
-		lookup.put("Japanese Culture Class", "Culture");
-		lookup.put("Upper Intermediate", "UI");
-		return lookup;
-	}
-	
+
 	public Boolean isFinished() {
 		// iterate through work requests removing ones which has finished and records any downloads
 		Iterator<Map.Entry<String, DownloadTask>> it = downloads.entrySet().iterator();
@@ -142,14 +137,61 @@ public class ChannelProcessor {
 		if (changes) {
 			logger.info("changes detected updating history and playlists");
 			history.writeHistory();
-			PlayList pl = new PlayList(saveFolder);
-			pl.create();
+			this.playList.create();
 		}
 	}
-	interface FileProcessing
+
+	final static Map<String, String> createAbbreviationList() {
+		Map<String, String> lookup = new HashMap<String, String>();
+		lookup.put("Lower Intermediate", "LI");
+		lookup.put("Intermediate Lesson", "Int");
+		lookup.put("Beginner", "Beg");
+		lookup.put("Japanese Culture Class", "Culture");
+		lookup.put("Upper Intermediate", "UI");
+		return lookup;
+	}
+	
+	interface FileProcessingInterface
 	{
 		public void onSave();
 	}
+	
+	class FileProcessing implements FileProcessingInterface {
+		private Item item;
+		private Path filePath;
+		
+		FileProcessing(Item item, Path filePath) {
+			this.item = item;
+			this.filePath = filePath;
+		}
+		
+		@Override
+		public void onSave() {
+			try {
+				if (filePath.toString().endsWith(".mp3"))
+				{
+					String shortTitle = ChannelProcessor.niceNamer.makeTitle(this.item.title);
+					AudioFile f = AudioFileIO.read(filePath.toFile());
+					Tag tag = f.getTag();
+					String title;
+					if (tag != null)
+					{
+						title = tag.getFirst(FieldKey.TITLE);
+						if (title != shortTitle)
+						{
+							tag.setField(FieldKey.TITLE, shortTitle);
+							AudioFileIO.write(f);
+						}
+					}
+					ChannelProcessor.this.playList.addMp3(filePath.toString(), shortTitle, f.getAudioHeader().getTrackLength()); // how does Java find the correct instance of ChannelProcessor?
+				}	
+				logger.info(this.item.title);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	class Visitor implements PodcastVisitor 
 	{
 		History history;
@@ -165,20 +207,7 @@ public class ChannelProcessor {
 				if (fh.needToDownload)
 				{
 					ChannelProcessor.this.changes = true;
-					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh, new FileProcessing() {
-						private Item item;
-						@Override
-						public void onSave() {
-							//ChannelProcessor.this.
-							
-							logger.info(this.item.title);
-						}
-						private FileProcessing init(Item item, Path filePath) {
-							this.item = item;
-							return this;
-						}
-					}.init(item, savePath)
-					));
+					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh, new FileProcessing(item, savePath)));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}
 			} catch (MalformedURLException e) {
