@@ -21,18 +21,14 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 
 public class History {
-	private Path rssFolderPath;
 	private Path historyPath;
 	private Path historyBackupPath;
 	private Path folderPath;
-	private String channelTitle;
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 
 	private Map<String, FileHistory> filesHistory = new TreeMap<String, FileHistory>();
 
 	History(Path folder, String channelTitle) throws FileNotFoundException, IOException {
-		this.rssFolderPath = Paths.get(folder.toString(), "rssBackup");
-		this.channelTitle = channelTitle;
 		this.folderPath = Paths.get(folder.toString(), channelTitle);
 		this.historyPath = Paths.get(folder.toString(), channelTitle, ".history");
 		this.historyBackupPath = Paths.get(folder.toString(), channelTitle, ".history_bak");
@@ -40,27 +36,30 @@ public class History {
 			try (BufferedReader bReader = new BufferedReader(new FileReader(this.historyPath.toFile())))		
 			{
 				// file path, url, size from rss, size on disk, success, attempts
-				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),nf=(.+),rss_size=(\\d+),size=(\\d+),(true|false),(\\d+)$");
+				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),rss_size=(\\d+),size=(\\d+),(true|false),(\\d+)$");
 				String line;
 				while ((line = bReader.readLine()) != null) {
 					Matcher m = pattern.matcher(line);
-					if (m.matches() && m.groupCount() == 7)
-					{
+					if (m.matches() && m.groupCount() == 6) {
 						FileHistory fH = new FileHistory();
 						fH.fileName = m.group(1);
 						fH.url = new URL(m.group(2));
-						fH.niceFilename = m.group(3);
-						fH.rssSize = Integer.parseInt(m.group(4));
-						fH.fileSize = Integer.parseInt(m.group(5));
-						fH.success = Boolean.parseBoolean(m.group(6));
-						fH.attempts = Integer.parseInt(m.group(7));
+						//fH.niceFilename = m.group(3);
+						fH.rssSize = Integer.parseInt(m.group(3));
+						fH.fileSize = Integer.parseInt(m.group(4));
+						fH.success = Boolean.parseBoolean(m.group(5));
+						fH.attempts = Integer.parseInt(m.group(6));
 						filesHistory.put(fH.fileName, fH);
 					}
+					else {
+						logger.error("couldn't parse history file. Ln: = " + line);
+					}
+					
 				}	
 			}	
 		}
 	}
-	public void writeHistory() {
+	void writeHistory() {
 		if (Files.exists(historyPath)) {
 			if (Files.exists(historyBackupPath)) {
 				historyBackupPath.toFile().delete();	
@@ -78,34 +77,16 @@ public class History {
 			logger.error("writeHistory", e);
 		}
 	}
-	public void saveRss(String rssFile) throws IOException {
-		final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
-	    String rssFileName = channelTitle + "_" + isoFormat.format(new GregorianCalendar().getTime()) + ".xml";
-	    if (Files.notExists(rssFolderPath, LinkOption.NOFOLLOW_LINKS))
-		{
-	    	Files.createDirectory(rssFolderPath);
-		}
-	    Path rssFilePath = Paths.get(rssFolderPath.toString(), rssFileName);
-	    try (BufferedWriter writer = new BufferedWriter(new FileWriter(rssFilePath.toFile()))) {
-	    	writer.write(rssFile);
-	    } catch (Exception e) {
-	    	throw e;
-	    }
-	}
-
-	String findlastSaveRssFile() {
-		String file = "";
-		return file;
-	}
 	
-	private void needToDownload(FileHistory fileHistory, long latestRssLength) throws IOException {
+	private void checkIfNeedToDownload(FileHistory fileHistory, long latestRssLength) throws IOException {
 		fileHistory.needToDownload = false;
-		Path filePath = Paths.get(folderPath.toString(), fileHistory.fileName);
+		Path filePath = Paths.get(fileHistory.fileName);
 		if (Files.exists(filePath, LinkOption.NOFOLLOW_LINKS))
 		{
-			if (Files.size(filePath) != latestRssLength)
+			if (Files.size(filePath) != latestRssLength) // sizes of correctly downloaded files sometimes don't match the size in the rss  
 			{
 				logger.info(fileHistory.fileName + " Already exists but size is different origSize: " + Files.size(filePath) + " newSize:" + fileHistory.rssSize);
+				// see if the original rss length has changed
 				if (latestRssLength != fileHistory.rssSize) {
 					// the rsslength has changed
 					fileHistory.rssSize = latestRssLength;
@@ -121,9 +102,10 @@ public class History {
 		}
 	}
 	
-	public FileHistory getFileHistory(String fileName, URL url, long rssLength) throws IOException {
+	FileHistory getFileHistory(String fileName, URL url, long rssLength) throws IOException {
 		FileHistory fileHistory = filesHistory.get(fileName);
 		if (fileHistory == null) {
+			// no record found so need to download
 			fileHistory = new FileHistory();
 			fileHistory.fileName = fileName;
 			fileHistory.url = url;
@@ -134,8 +116,9 @@ public class History {
 			fileHistory.needToDownload = true; // assume we haven't downloaded it
 			filesHistory.put(fileName, fileHistory);
 		}
-		else
-			needToDownload(fileHistory, rssLength);
+		else {
+			checkIfNeedToDownload(fileHistory, rssLength);
+		}
 		return fileHistory;
 	}
 
@@ -146,7 +129,7 @@ public class History {
 	class FileHistory {
 		String fileName;
 		URL url;
-		String niceFilename;
+		//String niceFilename;
 		long rssSize;
 		long fileSize;
 		boolean success;

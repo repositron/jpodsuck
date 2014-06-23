@@ -29,6 +29,9 @@ class PlayList {
 		else if (Files.exists(this.playListFile, LinkOption.NOFOLLOW_LINKS)) {
 			readPlayList();
 		}
+		else {
+			regenerate(folder);
+		}
 	}
 	
 	// can be called from multiple threads
