@@ -1,4 +1,4 @@
-package ljw.jpodsuck;
+
 import java.io.Reader;
 
 import org.xml.sax.Attributes;

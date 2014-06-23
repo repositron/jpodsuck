@@ -1,6 +1,3 @@
-package ljw.jpodsuck;
-
-
 import java.io.*;
 import java.nio.file.*;
 import java.util.Map;

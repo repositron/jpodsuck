@@ -1,5 +1,3 @@
-package ljw.jpodsuck;
-
 import java.util.HashMap;
 import java.util.Map;
 

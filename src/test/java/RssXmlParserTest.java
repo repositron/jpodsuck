@@ -1,4 +1,3 @@
-package ljw.jpodsuck;
 import static org.junit.Assert.*;
 
 import java.io.FileNotFoundException;

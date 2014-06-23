@@ -1,4 +1,3 @@
-package ljw.jpodsuck;
 import java.util.ArrayList;
 
 public class Config {
