@@ -21,6 +21,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
+
 package org.thirdparty.alphanumeric;
 
 import java.util.Comparator;
@@ -38,6 +39,7 @@ import java.util.Comparator;
  *   Use the static "sort" method from the java.util.Collections class:
  *   Collections.sort(your list, new AlphanumComparator());
  */
+
 public class AlphanumComparator implements Comparator<String>
 {
     private final boolean isDigit(char ch)
