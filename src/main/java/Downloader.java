@@ -40,7 +40,7 @@ public enum Downloader {
 	}
 	
 	public DownloadTask download(History.FileHistory fileHistory, ChannelProcessor.FileProcessing fileProcessing) {
-		logger.info("downloading " + fileHistory.url.toString() + " file: " + fileHistory.fileName);
+		logger.info("downloading " + fileHistory.url.toString() + " file: " + fileHistory.fileAbsolutePath);
 		DownloadRunnable downloadRunnable = new DownloadRunnable(httpClient, fileHistory);
 		DownloadTask downloadTask = new DownloadTask(downloadRunnable, fileProcessing);
 		exec.execute(downloadTask);
@@ -75,20 +75,20 @@ class DownloadRunnable implements Callable<History.FileHistory>
 			HttpGet httpget = new HttpGet(fileHistory.url.toURI());
 			response = httpClient.execute(httpget);
 			HttpEntity entity = response.getEntity();
-			String downloadFileName = fileHistory.fileName + "~download";
+			String downloadFileName = fileHistory.fileAbsolutePath + "~download";
 	        try (FileOutputStream outputStream = new FileOutputStream(downloadFileName)) {
 	        	InputStream input = entity.getContent();
 	        	IOUtils.copy(input, outputStream);
 	        	outputStream.close();
 	        	input.close();
-	        	Files.move(Paths.get(downloadFileName), Paths.get(fileHistory.fileName), StandardCopyOption.REPLACE_EXISTING);
+	        	Files.move(Paths.get(downloadFileName), Paths.get(fileHistory.fileAbsolutePath), StandardCopyOption.REPLACE_EXISTING);
 	        } catch (Exception e) {
 	        	logger.info("exception: ", e);
 	        	throw e;
 	        }
 	        fileHistory.success = true;
-	        fileHistory.fileSize = Files.size(Paths.get(fileHistory.fileName));
-	        logger.info("written: " + fileHistory.fileName);
+	        fileHistory.fileSize = Files.size(Paths.get(fileHistory.fileAbsolutePath));
+	        logger.info("written: " + fileHistory.fileAbsolutePath);
 	        
 		} catch (Exception e) {
 			fileHistory.success = false;

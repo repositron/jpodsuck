@@ -1,5 +1,4 @@
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -10,8 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.GregorianCalendar;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -40,14 +37,14 @@ public class History {
 					Matcher m = pattern.matcher(line);
 					if (m.matches() && m.groupCount() == 6) {
 						FileHistory fH = new FileHistory();
-						fH.fileName = m.group(1);
+						fH.fileAbsolutePath = m.group(1);
 						fH.url = new URL(m.group(2));
 						//fH.niceFilename = m.group(3);
 						fH.rssSize = Integer.parseInt(m.group(3));
 						fH.fileSize = Integer.parseInt(m.group(4));
 						fH.success = Boolean.parseBoolean(m.group(5));
 						fH.attempts = Integer.parseInt(m.group(6));
-						filesHistory.put(fH.fileName, fH);
+						filesHistory.put(fH.fileAbsolutePath, fH);
 					}
 					else {
 						logger.error("couldn't parse history file. Ln: = " + line);
@@ -68,7 +65,7 @@ public class History {
 			for (Map.Entry<String, FileHistory>  entry : filesHistory.entrySet()) {
 				FileHistory h = entry.getValue();
 				writer.format("\"%s\",%s,rss_size=%d,size=%d,%b,%d",
-						h.fileName, h.url.toString(), h.rssSize, h.fileSize, h.success, h.attempts);
+						h.fileAbsolutePath, h.url.toString(), h.rssSize, h.fileSize, h.success, h.attempts);
 				writer.println();
 			}
 		} catch (IOException e) {
@@ -78,12 +75,12 @@ public class History {
 	
 	private void checkIfNeedToDownload(FileHistory fileHistory, long latestRssLength) throws IOException {
 		fileHistory.needToDownload = false;
-		Path filePath = Paths.get(fileHistory.fileName);
-		if (Files.exists(filePath, LinkOption.NOFOLLOW_LINKS))
+		Path fileAbsolutePath = Paths.get(fileHistory.fileAbsolutePath);
+		if (Files.exists(fileAbsolutePath, LinkOption.NOFOLLOW_LINKS))
 		{
-			if (Files.size(filePath) != latestRssLength) // sizes of correctly downloaded files sometimes don't match the size in the rss  
+			if (Files.size(fileAbsolutePath) != latestRssLength) // sizes of correctly downloaded files sometimes don't match the size in the rss
 			{
-				logger.info(fileHistory.fileName + " Already exists but size is different origSize: " + Files.size(filePath) + " newSize:" + fileHistory.rssSize);
+				logger.info(fileHistory.fileAbsolutePath + " Already exists but size is different origSize: " + Files.size(fileAbsolutePath) + " newSize:" + fileHistory.rssSize);
 				// see if the original rss length has changed
 				if (latestRssLength != fileHistory.rssSize) {
 					// the rsslength has changed
@@ -94,25 +91,25 @@ public class History {
 		}
 		else
 		{
-			logger.info(filePath.toString() + " doesn't exist");
+			logger.info(fileAbsolutePath.toString() + " doesn't exist");
 			fileHistory.needToDownload = true;
 			
 		}
 	}
 	
-	FileHistory getFileHistory(String fileName, URL url, long rssLength) throws IOException {
-		FileHistory fileHistory = filesHistory.get(fileName);
+	FileHistory getFileHistory(String fileAbsolutePath, URL url, long rssLength) throws IOException {
+		FileHistory fileHistory = filesHistory.get(fileAbsolutePath);
 		if (fileHistory == null) {
 			// no record found so need to download
 			fileHistory = new FileHistory();
-			fileHistory.fileName = fileName;
+			fileHistory.fileAbsolutePath = fileAbsolutePath;
 			fileHistory.url = url;
 			fileHistory.rssSize = rssLength;
 			fileHistory.fileSize = 0;
 			fileHistory.attempts = 0;
 			fileHistory.success = false;
 			fileHistory.needToDownload = true; // assume we haven't downloaded it
-			filesHistory.put(fileName, fileHistory);
+			filesHistory.put(fileAbsolutePath, fileHistory);
 		}
 		else {
 			checkIfNeedToDownload(fileHistory, rssLength);
@@ -125,7 +122,7 @@ public class History {
 	}
 	
 	class FileHistory {
-		String fileName;
+		String fileAbsolutePath;
 		URL url;
 		//String niceFilename;
 		long rssSize;
