@@ -49,7 +49,7 @@ public class HistoryTest {
 	}
 	
 	@Test
-	public final void test1() {
+	public final void testExistHistory() {
 		try {
 			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
 			Assert.assertFalse(needToDownload(h, "dlfiles/a1/file1.mp3", new URL("http://jp.com/file1.mp3"), 18));
@@ -80,20 +80,24 @@ public class HistoryTest {
 			e.printStackTrace();
 			fail("exception");
 		}
-
-		try {
-			History h2 = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
-			Assert.assertFalse(needToDownload(h2, "dlfiles/a1/file1.mp3", new URL("http://jp.com/file1.mp3"), 18));
-			Assert.assertFalse(needToDownload(h2, "dlfiles/a1/file2.mp3", new URL("http://jp.com/file2.mp3"), 2));
-			Assert.assertFalse(needToDownload(h2, "dlfiles/a1/file3.mp3", new URL("http://jp.com/file3.mp3"), 10));
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 	}
+
+    @Test
+    public final void testDownloadedMp3sNotDownloadAgain() {
+        testExistHistory();
+        try {
+            History h2 = new History(Paths.get("dlfiles").toAbsolutePath(), "a1");
+            Assert.assertFalse(needToDownload(h2, "dlfiles/a1/file1.mp3", new URL("http://jp.com/file1.mp3"), 18));
+            Assert.assertFalse(needToDownload(h2, "dlfiles/a1/file2.mp3", new URL("http://jp.com/file2.mp3"), 2));
+            Assert.assertFalse(needToDownload(h2, "dlfiles/a1/file3.mp3", new URL("http://jp.com/file3.mp3"), 10));
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
 	@Test
-	public final void testNoHistoryFile() {
+	public final void testNoHistoryFileButMp3Exists() {
 		try {
 			History h = new History(Paths.get("dlfiles").toAbsolutePath(), "a2");
 			

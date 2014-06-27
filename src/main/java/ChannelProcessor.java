@@ -1,9 +1,6 @@
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -15,13 +12,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.nio.file.*;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.log4j.Logger;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
@@ -29,9 +22,6 @@ import org.jaudiotagger.tag.Tag;
 
 
 public class ChannelProcessor {
-
-	private DefaultHttpClient httpclient;
-	private URL urlChannel;
 	private String saveToRootFolder;
 	private Path saveFolder;
 	private History history;
@@ -42,13 +32,11 @@ public class ChannelProcessor {
 	static final NiceNamer niceNamer = new NiceNamer(createAbbreviationList());
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
-	ChannelProcessor(DefaultHttpClient httpclient, URL urlChannel, String saveToRootFolder) {
-		this.httpclient = httpclient;
-		this.urlChannel = urlChannel;
+	ChannelProcessor(String saveToRootFolder) {
 		this.saveToRootFolder = saveToRootFolder;
 	}
-	public void process() {
-		downloadRssFileAndUpdate();
+	public void process(String rss) {
+		processRss(rss);
 	}
 
 	PodcastsInterface getPodcasts(String s) throws Exception {
@@ -78,20 +66,9 @@ public class ChannelProcessor {
 	    }    
 	}
 	
-	private void downloadRssFileAndUpdate() {
+	private void processRss(String rss) {
 		try {
-			logger.info("channel: " + urlChannel.toString());
-			HttpGet httpget = new HttpGet(urlChannel.toString());
-			HttpResponse response = httpclient.execute(httpget);
-		    HttpEntity entity = response.getEntity();
-		    BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
-		    
-		    // download rss file to memory stream.
-		    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-		    IOUtils.copy(reader, byteStream);
-		    String rss = byteStream.toString("UTF-8");
-		    PodcastsInterface podcasts = getPodcasts(rss);
-		    
+            PodcastsInterface podcasts = getPodcasts(rss);
 		    final String throwAwayStr = "JapanesePod101.com | My Feed - ";
 		    String channelTitle = podcasts.getChannelTitle();
 		    String folder;
@@ -116,7 +93,7 @@ public class ChannelProcessor {
 		    saveRssFile(folder, rss);
 		   
 		} catch (Exception e) {
-			logger.error("downloadRssFile exception", e);
+			logger.error("process exception", e);
 		}
 	}
 

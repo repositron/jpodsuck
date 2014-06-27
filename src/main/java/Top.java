@@ -43,13 +43,12 @@ public class Top {
 	            
 				ArrayList<ChannelProcessor> processors = new ArrayList<ChannelProcessor>();
 				for (String s: config.urls) {
-					processors.add(new ChannelProcessor(httpclient, new URL(s), config.folder));
+                    RssFileDownloader rssfileDownloader = new RssFileDownloader(httpclient, new URL(s));
+                    ChannelProcessor ch = new ChannelProcessor(config.folder);
+					processors.add(ch);
+                    ch.process(rssfileDownloader.download());
 				}
 
-				for (ChannelProcessor p : processors) {
-					p.process();
-				}
-				
 				while (!processors.isEmpty()) {
 					Iterator<ChannelProcessor> it = processors.iterator();
 					while (it.hasNext()) {
