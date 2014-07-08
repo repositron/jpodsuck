@@ -122,4 +122,5 @@ public class HistoryTest {
 			fail("exception");
 		}
 	}
+
 }
