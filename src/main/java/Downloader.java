@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,6 +61,20 @@ public class Downloader {
             this.fileHistory = fileHistory;
         }
 
+        private void copyResponse(HttpEntity entity, String fileName) throws IOException {
+            final String fileNameTmp = fileName + "~download";
+            try (FileOutputStream outputStream = new FileOutputStream(fileNameTmp)) {
+                InputStream input = entity.getContent();
+                IOUtils.copy(input, outputStream);
+                outputStream.close();
+                input.close();
+                Files.move(Paths.get(fileNameTmp), Paths.get(fileName), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                logger.info("IOException: ", e);
+                throw e;
+            }
+        }
+
         @Override
         public History.FileHistory call() throws Exception {
             HttpResponse response;
@@ -69,21 +84,10 @@ public class Downloader {
                 HttpGet httpget = new HttpGet(fileHistory.url.toURI());
                 response = httpClient.execute(httpget);
                 HttpEntity entity = response.getEntity();
-                String downloadFileName = fileHistory.fileAbsolutePath + "~download";
-                try (FileOutputStream outputStream = new FileOutputStream(downloadFileName)) {
-                    InputStream input = entity.getContent();
-                    IOUtils.copy(input, outputStream);
-                    outputStream.close();
-                    input.close();
-                    Files.move(Paths.get(downloadFileName), Paths.get(fileHistory.fileAbsolutePath), StandardCopyOption.REPLACE_EXISTING);
-                } catch (Exception e) {
-                    logger.info("exception: ", e);
-                    throw e;
-                }
+                copyResponse(entity, fileHistory.fileAbsolutePath);
                 fileHistory.success = true;
                 fileHistory.fileSize = Files.size(Paths.get(fileHistory.fileAbsolutePath));
                 logger.info("written: " + fileHistory.fileAbsolutePath);
-
             } catch (Exception e) {
                 fileHistory.success = false;
                 fileHistory.fileSize = 0;

@@ -4,6 +4,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -34,26 +35,32 @@ public class History {
 				Pattern pattern = Pattern.compile("^\"(.+)\",(.+),rss_size=(\\d+),size=(\\d+),(true|false),(\\d+)$");
 				String line;
 				while ((line = bReader.readLine()) != null) {
-					Matcher m = pattern.matcher(line);
-					if (m.matches() && m.groupCount() == 6) {
-						FileHistory fH = new FileHistory();
-						fH.fileAbsolutePath = m.group(1);
-						fH.url = new URL(m.group(2));
-						//fH.niceFilename = m.group(3);
-						fH.rssSize = Integer.parseInt(m.group(3));
-						fH.fileSize = Integer.parseInt(m.group(4));
-						fH.success = Boolean.parseBoolean(m.group(5));
-						fH.attempts = Integer.parseInt(m.group(6));
-						filesHistory.put(fH.fileAbsolutePath, fH);
-					}
-					else {
-						logger.error("couldn't parse history file. Ln: = " + line);
-					}
-					
+	                FileHistory fh = parseLine(line, pattern);
+                    if (fh != null)
+                        filesHistory.put(fh.fileAbsolutePath, fh);
 				}	
 			}	
 		}
 	}
+
+    private FileHistory parseLine(String line, Pattern pattern) throws MalformedURLException {
+        Matcher m = pattern.matcher(line);
+        if (m.matches() && m.groupCount() == 6) {
+            FileHistory fH = new FileHistory();
+            fH.fileAbsolutePath = m.group(1);
+            fH.url = new URL(m.group(2));
+            //fH.niceFilename = m.group(3);
+            fH.rssSize = Integer.parseInt(m.group(3));
+            fH.fileSize = Integer.parseInt(m.group(4));
+            fH.success = Boolean.parseBoolean(m.group(5));
+            fH.attempts = Integer.parseInt(m.group(6));
+            return fH;
+        }
+        else {
+            logger.error("couldn't parse history file. Ln: = " + line);
+            return null;
+        }
+    }
 	void writeHistory() {
 		if (Files.exists(historyPath)) {
 			if (Files.exists(historyBackupPath)) {
@@ -72,29 +79,31 @@ public class History {
 			logger.error("writeHistory", e);
 		}
 	}
-	
-	private void checkIfNeedToDownload(FileHistory fileHistory, long latestRssLength) throws IOException {
-		fileHistory.needToDownload = false;
+
+	private FileHistory checkIfNeedToDownload(FileHistory fileHistory, long latestRssLength) throws IOException, CloneNotSupportedException {
+        FileHistory newFileHistory = (FileHistory) fileHistory.clone();
+        fileHistory.needToDownload = false;
+
 		Path fileAbsolutePath = Paths.get(fileHistory.fileAbsolutePath);
-		if (Files.exists(fileAbsolutePath, LinkOption.NOFOLLOW_LINKS))
-		{
-			if (Files.size(fileAbsolutePath) != latestRssLength) // sizes of correctly downloaded files sometimes don't match the size in the rss
-			{
-				logger.info(fileHistory.fileAbsolutePath + " Already exists but size is different origSize: " + Files.size(fileAbsolutePath) + " newSize:" + fileHistory.rssSize);
-				// see if the original rss length has changed
-				if (latestRssLength != fileHistory.rssSize) {
-					// the rsslength has changed
-					fileHistory.rssSize = latestRssLength;
-					fileHistory.needToDownload = true;
-				}
-			}
-		}
-		else
-		{
-			logger.info(fileAbsolutePath.toString() + " doesn't exist");
-			fileHistory.needToDownload = true;
-			
-		}
+		if (Files.notExists(fileAbsolutePath, LinkOption.NOFOLLOW_LINKS))
+            return newFileHistory;
+
+		if (Files.size(fileAbsolutePath) == latestRssLength) // sizes of correctly downloaded files sometimes don't match the size in the rss
+            return newFileHistory;
+
+        logger.info(fileHistory.fileAbsolutePath + " Already exists but size is different origSize: " + Files.size(fileAbsolutePath) + " newSize:" + fileHistory.rssSize);
+        // see if the original rss length has changed
+        if (latestRssLength != fileHistory.rssSize) {
+            // the rsslength has changed
+            newFileHistory.rssSize = latestRssLength;
+            newFileHistory.needToDownload = true;
+            return newFileHistory;
+        }
+
+        logger.info(fileAbsolutePath.toString() + " doesn't exist");
+        fileHistory.needToDownload = true;
+		return newFileHistory;
+
 	}
 	
 	FileHistory getFileHistory(String fileAbsolutePath, URL url, long rssLength) throws IOException {
@@ -112,7 +121,12 @@ public class History {
 			filesHistory.put(fileAbsolutePath, fileHistory);
 		}
 		else {
-			checkIfNeedToDownload(fileHistory, rssLength);
+            try {
+                fileHistory = checkIfNeedToDownload(fileHistory, rssLength);
+            } catch (CloneNotSupportedException e) {
+                logger.error("clone error: ", e);
+            }
+
 		}
 		return fileHistory;
 	}
@@ -121,7 +135,7 @@ public class History {
 		
 	}
 	
-	class FileHistory {
+	class FileHistory implements Cloneable {
 		String fileAbsolutePath;
 		URL url;
 		//String niceFilename;
@@ -130,6 +144,11 @@ public class History {
 		boolean success;
 		int attempts;
 		boolean needToDownload;
+
+        @Override
+        protected Object clone() throws CloneNotSupportedException {
+            return super.clone();
+        }
 	}
 
 }
