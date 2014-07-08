@@ -39,12 +39,12 @@ public class Top {
 	
 				httpclient.getCredentialsProvider().setCredentials(new AuthScope(url.getHost(), AuthScope.ANY_PORT, null, "basic"),
                     new UsernamePasswordCredentials(config.user, config.password));
-				Downloader.INSTANCE.init(httpclient);
+				Downloader downloader = new Downloader(httpclient);
 	            
 				ArrayList<ChannelProcessor> processors = new ArrayList<ChannelProcessor>();
 				for (String s: config.urls) {
                     RssFileDownloader rssfileDownloader = new RssFileDownloader(httpclient, new URL(s));
-                    ChannelProcessor ch = new ChannelProcessor(config.folder);
+                    ChannelProcessor ch = new ChannelProcessor(config.folder, downloader);
 					processors.add(ch);
                     ch.process(rssfileDownloader.download());
 				}
@@ -67,7 +67,6 @@ public class Top {
 	        	logger.error("Exception ", e);
 				e.printStackTrace(System.out);
 			} finally {
-				Downloader.INSTANCE.close();
 	            httpclient.getConnectionManager().shutdown();
 	        }
 		}
@@ -88,7 +87,6 @@ public class Top {
 				}
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

@@ -21,8 +21,7 @@ class UpdateScheduler {
 		this.periodMinutes = periodMinutes;
 		this.retryMinutes = retryMinutes;
 		this.nextTime = new GregorianCalendar(1973,0,0);
-		
-		//BufferedReader reader;
+
 		try {
 			if (Files.exists(lastUpdateFile, LinkOption.NOFOLLOW_LINKS)) {
 				try (BufferedReader reader = new BufferedReader(new FileReader(lastUpdateFile.toFile()))) {

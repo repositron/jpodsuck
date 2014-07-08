@@ -15,7 +15,8 @@ libraryDependencies ++= Seq(
   "org.apache.commons" % "commons-lang3" % "3.+",
   "org" % "jaudiotagger" % "2.+",
   "org.apache.httpcomponents" % "httpclient" % "4.3.+",
-  "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.+"
+  "org.codehaus.jackson" % "jackson-mapper-asl" % "1.9.+",
+  "org.jmockit" % "jmockit" % "1.+"
 )
 
 scalacOptions in Test ++= Seq("-Yrangepos")

@@ -27,14 +27,17 @@ public class ChannelProcessor {
 	private History history;
 	private Boolean changes = false;
 	private PlayList playList;
+    private Downloader downloader;
 	final String downloadsInProgressFileName = "downloadsinprogress.txt";
-	private Map<String, DownloadTask> downloads = new TreeMap<String, DownloadTask>();
+	private Map<String, Downloader.DownloadTask> downloads = new TreeMap<String, Downloader.DownloadTask>();
 	static final NiceNamer niceNamer = new NiceNamer(createAbbreviationList());
 	static Logger logger = Logger.getLogger("ljw.jpodsuck");
 	
-	ChannelProcessor(String saveToRootFolder) {
+	ChannelProcessor(String saveToRootFolder, Downloader downloader) {
 		this.saveToRootFolder = saveToRootFolder;
+        this.downloader = downloader;
 	}
+
 	public void process(String rss) {
 		processRss(rss);
 	}
@@ -88,7 +91,7 @@ public class ChannelProcessor {
 				removeDownloadsInProgress();
 			}
 		    this.history = new History(Paths.get(saveToRootFolder), folder);
-		    Visitor visitor = new Visitor(this.history);
+		    Visitor visitor = new Visitor(this.history, downloader);
 		    podcasts.accept(visitor); // visit all podcast items and process.
 		    saveRssFile(folder, rss);
 		   
@@ -99,9 +102,9 @@ public class ChannelProcessor {
 
 	public Boolean isFinished() {
 		// iterate through work requests removing ones which has finished and records any downloads
-		Iterator<Map.Entry<String, DownloadTask>> it = downloads.entrySet().iterator();
+		Iterator<Map.Entry<String, Downloader.DownloadTask>> it = downloads.entrySet().iterator();
 		while (it.hasNext()) {
-			Map.Entry<String, DownloadTask> entry = it.next();
+			Map.Entry<String, Downloader.DownloadTask> entry = it.next();
 			if (entry.getValue().isDone())
 			{
 				try {
@@ -202,8 +205,10 @@ public class ChannelProcessor {
 	class Visitor implements PodcastVisitor 
 	{
 		History history;
-		Visitor(History history) {
-			this.history = history;
+        Downloader downloader;
+		Visitor(History history, Downloader downloader) {
+            this.history = history;
+            this.downloader = downloader;
 		}
 		@Override
 		public void visit(Item item) {
@@ -214,7 +219,7 @@ public class ChannelProcessor {
 				if (fh.needToDownload)
 				{
 					setDownloadsInProgress();
-					ChannelProcessor.this.downloads.put(url.toString(), Downloader.INSTANCE.download(fh, new FileProcessing(item, savePath)));
+					ChannelProcessor.this.downloads.put(url.toString(), downloader.download(fh, new FileProcessing(item, savePath)));
 					logger.info("Dl " + url.toString() + " to " + savePath.toString() + " size: " + item.length);
 				}
 			} catch (MalformedURLException e) {

@@ -1,6 +1,3 @@
-
-
-
 public interface PodcastsInterface {
 	void contextCreateItem();
 	void setChannelTitle(String channelTitle);
